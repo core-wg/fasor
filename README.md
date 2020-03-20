@@ -3,7 +3,7 @@
 This is the working area for the IETF [CORE Working Group](https://datatracker.ietf.org/wg/core/documents/) Internet-Draft, "Fast-Slow Retransmission Timeout and Congestion Control Algorithm for CoAP".
 
 * [Editor's Copy](https://core-wg.github.io/fasor/#go.draft-ietf-core-fasor.html)
-* [Working Group Draft](https://tools.ietf.org/html/draft-ietf-core-fasor)
+* [Working Group Draft](https://tools.ietf.org/html/draft-ietf-core-fasor)  [![Build Status](https://travis-ci.org/core-wg/fasor.svg?branch=master)](https://travis-ci.org/core-wg/fasor)
 * [Compare Editor's Copy to Working Group Draft](https://core-wg.github.io/fasor/#go.draft-ietf-core-fasor.diff)
 
 ## Building the Draft
