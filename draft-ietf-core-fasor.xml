@@ -591,8 +591,8 @@ on unambiguous round-trip time (RTT) samples.
         the memory). The first original transmission of the
         request to a new endpoint carries the number 255 (0xFF) and is
         interpreted the same as an original transmission carrying the
-        number 0. Retransmissions, if any, carry the ordinal number of
-        the retransmission. Once the first Piggybacked Response from the new
+        number 0.
+        Once the first Piggybacked Response from the new
         endpoint arrives the client learns whether or not the other
         endpoint implements the option. If the first response includes
         the echoed option, the client learns that the other endpoint
@@ -603,6 +603,10 @@ on unambiguous round-trip time (RTT) samples.
         uint-encoding rules. If the first Piggybacked Response does not include the
         option, the client SHOULD stop including the option into the
         requests to that endpoint.
+        Retransmissions, if any, carry the ordinal number of
+        the retransmission. That is, the client increments the
+        retransmission count by one for each retransmission of
+        the message.
         </t>
 <!--
         <t>
