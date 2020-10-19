@@ -507,10 +507,11 @@ on unambiguous round-trip time (RTT) samples.
         options to an Empty message. Therefore, Retransmission Count Option
         is useful only for the common case of Piggybacked Response. In
         case of Empty Acknowledgements the operation of FASOR is the
-        same as without the option. This limitation may limit the usefulness
+        same as without the option. This restriction with Empty
+        Acknowledgements may limit the usefulness
         of the Retransmission Count Option in deployment scenarios where
         the receiver is a proxy that will typically respond with an
-        Empty message when it receives the request message.
+        Empty Acknowledgement when it receives a request message.
         </t>
 
         <texttable anchor="table_rexmit_opt" title="Retransmission Count Option">
