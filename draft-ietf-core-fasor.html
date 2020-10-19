@@ -1,560 +1,1333 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Fast-Slow Retransmission Timeout and Congestion Control Algorithm for CoAP</title>
+<meta content="Ilpo Jarvinen" name="author">
+<meta content="Markku Kojo" name="author">
+<meta content="Iivo Raitahila" name="author">
+<meta content="Zhen Cao" name="author">
+<meta content="
+       This document specifies an alternative retransmission timeout and
+congestion control back off algorithm for
+the CoAP protocol, called Fast-Slow RTO (FASOR). 
+       The algorithm specified in this document employs
+an appropriate and large enough back off of Retransmission Timeout (RTO)
+as the major congestion control mechanism to allow acquiring unambiguous
+RTT samples with high probability
+and to prevent building a persistent queue when retransmitting.
+The algorithm also aims to retransmit quickly
+using an accurately managed retransmission timeout when
+link-errors are occuring, basing RTO calculation
+on unambiguous round-trip time (RTT) samples.
+ 
+    " name="description">
+<meta content="xml2rfc 3.2.1" name="generator">
+<meta content="Network Management" name="keyword">
+<meta content="draft-ietf-core-fasor-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.2.1
+    Python 3.8.2
+    appdirs 1.4.4
+    ConfigArgParse 1.2.3
+    google-i18n-address 2.4.0
+    html5lib 1.1
+    intervaltree 3.0.2
+    Jinja2 2.11.2
+    kitchen 1.2.6
+    lxml 4.5.0
+    pycountry 19.8.18
+    pyflakes 2.1.1
+    PyYAML 5.3.1
+    requests 2.22.0
+    setuptools 45.2.0
+    six 1.14.0
+-->
+<link href="draft-ietf-core-fasor.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@import url('https://martinthomson.github.io/i-d-template/fonts.css');
 
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-<head profile="http://www.w3.org/2006/03/hcard http://dublincore.org/documents/2008/08/04/dc-html/">
-  <meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
+html {
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --small-font-size: 14.5px;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
 
-  <title>Fast-Slow Retransmission Timeout and Congestion Control Algorithm for CoAP</title>
+.ears {
+  display: none;
+}
 
-  <style type="text/css" title="Xml2Rfc (sans serif)">
-  /*<![CDATA[*/
-	  a {
-	  text-decoration: none;
-	  }
-      /* info code from SantaKlauss at http://www.madaboutstyle.com/tooltip2.html */
-      a.info {
-          /* This is the key. */
-          position: relative;
-          z-index: 24;
-          text-decoration: none;
-      }
-      a.info:hover {
-          z-index: 25;
-          color: #FFF; background-color: #900;
-      }
-      a.info span { display: none; }
-      a.info:hover span.info {
-          /* The span will display just on :hover state. */
-          display: block;
-          position: absolute;
-          font-size: smaller;
-          top: 2em; left: -5em; width: 15em;
-          padding: 2px; border: 1px solid #333;
-          color: #900; background-color: #EEE;
-          text-align: left;
-      }
-	  a.smpl {
-	  color: black;
-	  }
-	  a:hover {
-	  text-decoration: underline;
-	  }
-	  a:active {
-	  text-decoration: underline;
-	  }
-	  address {
-	  margin-top: 1em;
-	  margin-left: 2em;
-	  font-style: normal;
-	  }
-	  body {
-	  color: black;
-	  font-family: verdana, helvetica, arial, sans-serif;
-	  font-size: 10pt;
-	  max-width: 55em;
-	  
-	  }
-	  cite {
-	  font-style: normal;
-	  }
-	  dd {
-	  margin-right: 2em;
-	  }
-	  dl {
-	  margin-left: 2em;
-	  }
-	
-	  ul.empty {
-	  list-style-type: none;
-	  }
-	  ul.empty li {
-	  margin-top: .5em;
-	  }
-	  dl p {
-	  margin-left: 0em;
-	  }
-	  dt {
-	  margin-top: .5em;
-	  }
-	  h1 {
-	  font-size: 14pt;
-	  line-height: 21pt;
-	  page-break-after: avoid;
-	  }
-	  h1.np {
-	  page-break-before: always;
-	  }
-	  h1 a {
-	  color: #333333;
-	  }
-	  h2 {
-	  font-size: 12pt;
-	  line-height: 15pt;
-	  page-break-after: avoid;
-	  }
-	  h3, h4, h5, h6 {
-	  font-size: 10pt;
-	  page-break-after: avoid;
-	  }
-	  h2 a, h3 a, h4 a, h5 a, h6 a {
-	  color: black;
-	  }
-	  img {
-	  margin-left: 3em;
-	  }
-	  li {
-	  margin-left: 2em;
-	  margin-right: 2em;
-	  }
-	  ol {
-	  margin-left: 2em;
-	  margin-right: 2em;
-	  }
-	  ol p {
-	  margin-left: 0em;
-	  }
-	  p {
-	  margin-left: 2em;
-	  margin-right: 2em;
-	  }
-	  pre {
-	  margin-left: 3em;
-	  background-color: lightyellow;
-	  padding: .25em;
-	  }
-	  pre.text2 {
-	  border-style: dotted;
-	  border-width: 1px;
-	  background-color: #f0f0f0;
-	  width: 69em;
-	  }
-	  pre.inline {
-	  background-color: white;
-	  padding: 0em;
-	  }
-	  pre.text {
-	  border-style: dotted;
-	  border-width: 1px;
-	  background-color: #f8f8f8;
-	  width: 69em;
-	  }
-	  pre.drawing {
-	  border-style: solid;
-	  border-width: 1px;
-	  background-color: #f8f8f8;
-	  padding: 2em;
-	  }
-	  table {
-	  margin-left: 2em;
-	  }
-	  table.tt {
-	  vertical-align: top;
-	  }
-	  table.full {
-	  border-style: outset;
-	  border-width: 1px;
-	  }
-	  table.headers {
-	  border-style: outset;
-	  border-width: 1px;
-	  }
-	  table.tt td {
-	  vertical-align: top;
-	  }
-	  table.full td {
-	  border-style: inset;
-	  border-width: 1px;
-	  }
-	  table.tt th {
-	  vertical-align: top;
-	  }
-	  table.full th {
-	  border-style: inset;
-	  border-width: 1px;
-	  }
-	  table.headers th {
-	  border-style: none none inset none;
-	  border-width: 1px;
-	  }
-	  table.left {
-	  margin-right: auto;
-	  }
-	  table.right {
-	  margin-left: auto;
-	  }
-	  table.center {
-	  margin-left: auto;
-	  margin-right: auto;
-	  }
-	  caption {
-	  caption-side: bottom;
-	  font-weight: bold;
-	  font-size: 9pt;
-	  margin-top: .5em;
-	  }
-	
-	  table.header {
-	  border-spacing: 1px;
-	  width: 95%;
-	  font-size: 10pt;
-	  color: white;
-	  }
-	  td.top {
-	  vertical-align: top;
-	  }
-	  td.topnowrap {
-	  vertical-align: top;
-	  white-space: nowrap; 
-	  }
-	  table.header td {
-	  background-color: gray;
-	  width: 50%;
-	  }
-	  table.header a {
-	  color: white;
-	  }
-	  td.reference {
-	  vertical-align: top;
-	  white-space: nowrap;
-	  padding-right: 1em;
-	  }
-	  thead {
-	  display:table-header-group;
-	  }
-	  ul.toc, ul.toc ul {
-	  list-style: none;
-	  margin-left: 1.5em;
-	  margin-right: 0em;
-	  padding-left: 0em;
-	  }
-	  ul.toc li {
-	  line-height: 150%;
-	  font-weight: bold;
-	  font-size: 10pt;
-	  margin-left: 0em;
-	  margin-right: 0em;
-	  }
-	  ul.toc li li {
-	  line-height: normal;
-	  font-weight: normal;
-	  font-size: 9pt;
-	  margin-left: 0em;
-	  margin-right: 0em;
-	  }
-	  li.excluded {
-	  font-size: 0pt;
-	  }
-	  ul p {
-	  margin-left: 0em;
-	  }
-	
-	  .comment {
-	  background-color: yellow;
-	  }
-	  .center {
-	  text-align: center;
-	  }
-	  .error {
-	  color: red;
-	  font-style: italic;
-	  font-weight: bold;
-	  }
-	  .figure {
-	  font-weight: bold;
-	  text-align: center;
-	  font-size: 9pt;
-	  }
-	  .filename {
-	  color: #333333;
-	  font-weight: bold;
-	  font-size: 12pt;
-	  line-height: 21pt;
-	  text-align: center;
-	  }
-	  .fn {
-	  font-weight: bold;
-	  }
-	  .hidden {
-	  display: none;
-	  }
-	  .left {
-	  text-align: left;
-	  }
-	  .right {
-	  text-align: right;
-	  }
-	  .title {
-	  color: #990000;
-	  font-size: 18pt;
-	  line-height: 18pt;
-	  font-weight: bold;
-	  text-align: center;
-	  margin-top: 36pt;
-	  }
-	  .vcardline {
-	  display: block;
-	  }
-	  .warning {
-	  font-size: 14pt;
-	  background-color: yellow;
-	  }
-	
-	
-	  @media print {
-	  .noprint {
-		display: none;
-	  }
-	
-	  a {
-		color: black;
-		text-decoration: none;
-	  }
-	
-	  table.header {
-		width: 90%;
-	  }
-	
-	  td.header {
-		width: 50%;
-		color: black;
-		background-color: white;
-		vertical-align: top;
-		font-size: 12pt;
-	  }
-	
-	  ul.toc a::after {
-		content: leader('.') target-counter(attr(href), page);
-	  }
-	
-	  ul.ind li li a {
-		content: target-counter(attr(href), page);
-	  }
-	
-	  .print2col {
-		column-count: 2;
-		-moz-column-count: 2;
-		column-fill: auto;
-	  }
-	  }
-	
-	  @page {
-	  @top-left {
-		   content: "Internet-Draft"; 
-	  } 
-	  @top-right {
-		   content: "December 2010"; 
-	  } 
-	  @top-center {
-		   content: "Abbreviated Title";
-	  } 
-	  @bottom-left {
-		   content: "Doe"; 
-	  } 
-	  @bottom-center {
-		   content: "Expires June 2011"; 
-	  } 
-	  @bottom-right {
-		   content: "[Page " counter(page) "]"; 
-	  } 
-	  }
-	
-	  @page:first { 
-		@top-left {
-		  content: normal;
-		}
-		@top-right {
-		  content: normal;
-		}
-		@top-center {
-		  content: normal;
-		}
-	  }
-  /*]]>*/
-  </style>
+/* headings */
+#title, h1, h2, h3, h4, h5, h6 {
+  font-family: "Cabin Condensed", sans-serif;
+  font-weight: 600;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+#title {
+  padding: 1em 0 0.2em;
+  font-size: 32px;
+  line-height: 40px;
+  clear: both;
+}
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 26px;
+}
+h4, h5, h6 {
+  font-size: 18px;
+  line-height: 22px;
+}
 
-  <link href="#rfc.toc" rel="Contents">
-<link href="#rfc.section.1" rel="Chapter" title="1 Introduction">
-<link href="#rfc.section.2" rel="Chapter" title="2 Conventions">
-<link href="#rfc.section.3" rel="Chapter" title="3 Problems with Existing CoAP Congestion Control Algorithms">
-<link href="#rfc.section.4" rel="Chapter" title="4 FASOR Algorithm">
-<link href="#rfc.section.4.1" rel="Chapter" title="4.1 Computing Normal RTO (FastRTO)">
-<link href="#rfc.section.4.2" rel="Chapter" title="4.2 Slow RTO">
-<link href="#rfc.section.4.3" rel="Chapter" title="4.3 Retransmission Timeout Back Off Logic">
-<link href="#rfc.section.4.3.1" rel="Chapter" title="4.3.1 Overview">
-<link href="#rfc.section.4.3.2" rel="Chapter" title="4.3.2 Retransmission State Machine">
-<link href="#rfc.section.4.4" rel="Chapter" title="4.4 Retransmission Count Option">
-<link href="#rfc.section.4.5" rel="Chapter" title="4.5 Alternatives for Exchanging Retransmission Count Information">
-<link href="#rfc.section.5" rel="Chapter" title="5 Security Considerations">
-<link href="#rfc.section.6" rel="Chapter" title="6 IANA Considerations">
-<link href="#rfc.references" rel="Chapter" title="7 References">
-<link href="#rfc.references.1" rel="Chapter" title="7.1 Normative References">
-<link href="#rfc.references.2" rel="Chapter" title="7.2 Informative References">
-<link href="#rfc.appendix.A" rel="Chapter" title="A Pseudocode for Basic FASOR without Dithering">
-<link href="#rfc.authors" rel="Chapter">
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+}
+#abstract+p, #abstract+p code, #abstract+p samp, #abstract+p tt {
+  font-size: 18px;
+  line-height: 24px;
+}
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight.art-text {
+  background-color: var(--highlight-color);
+  border: 1px solid var(--line-color);
+  border-radius: 3px;
+  padding: 0.5em 1em 0;
+  margin-bottom: 0.5em;
+}
+.alignRight.art-text pre {
+  padding: 0;
+  width: auto;
+}
+.alignRight {
+  margin: 1em 0;
+}
+.alignRight > *:first-child {
+  border: none;
+  margin: 0;
+  float: right;
+  clear: both;
+}
+.alignRight > *:nth-child(2) {
+  clear: both;
+  display: block;
+  border: none;
+}
+svg {
+  display: block;
+}
+.alignCenter.art-text {
+  background-color: var(--highlight-color);
+  border: 1px solid var(--line-color);
+  border-radius: 3px;
+  padding: 0.5em 1em 0;
+  margin-bottom: 0.5em;
+}
+.alignCenter.art-text pre {
+  padding: 0;
+  width: auto;
+}
+.alignCenter {
+  margin: 1em 0;
+}
+.alignCenter > *:first-child {
+  border: none;
+  /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+     support flexbox yet.
+  */
+  display: table;
+  margin: 0 auto;
+}
 
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+}
+ol ol, ul ul, ol ul, ul ol {
+  margin-left: 1em;
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+.ulCompact li {
+  margin: 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+}
+ul.empty li, .ulEmpty li {
+  margin-top: 0.5em;
+}
+ul.compact, .ulCompact,
+ol.compact, .olCompact {
+  line-height: 100%;
+  margin: 0 0 0 2em;
+}
 
-  <meta name="generator" content="xml2rfc version 2.41.0 - https://tools.ietf.org/tools/xml2rfc" />
-  <link rel="schema.dct" href="http://purl.org/dc/terms/" />
+/* definition lists */
+dl {
+}
+dl > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl > dd {
+  margin-bottom: .8em;
+  min-height: 1.3em;
+}
+dl.compact > dd, .dlCompact > dd {
+  margin-bottom: 0em;
+}
+dl > dd > dl {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+dd.break {
+  display: none;
+}
 
-  <meta name="dct.creator" content="Jarvinen, I., Kojo, M., Raitahila, I., and Z. Cao" />
-  <meta name="dct.identifier" content="urn:ietf:id:draft-ietf-core-fasor-latest" />
-  <meta name="dct.issued" scheme="ISO8601" content="2020-31" />
-  <meta name="dct.abstract" content="This document specifies an alternative retransmission timeout and congestion control back off algorithm for the CoAP protocol, called Fast-Slow RTO (FASOR). The algorithm specified in this document employs an appropriate and large enough back off of Retransmission Timeout (RTO) as the major congestion control mechanism to allow acquiring unambiguous RTT samples with high probability and to prevent building a persistent queue when retransmitting.  The algorithm also aims to retransmit quickly using an accurately managed retransmission timeout when link-errors are occuring, basing RTO calculation on unambiguous round-trip time (RTT) samples.   " />
-  <meta name="description" content="This document specifies an alternative retransmission timeout and congestion control back off algorithm for the CoAP protocol, called Fast-Slow RTO (FASOR). The algorithm specified in this document employs an appropriate and large enough back off of Retransmission Timeout (RTO) as the major congestion control mechanism to allow acquiring unambiguous RTT samples with high probability and to prevent building a persistent queue when retransmitting.  The algorithm also aims to retransmit quickly using an accurately managed retransmission timeout when link-errors are occuring, basing RTO calculation on unambiguous round-trip time (RTT) samples.   " />
+/* links */
+a, a[href].selfRef:hover {
+  text-decoration: none;
+}
+a[href].selfRef {
+  color: var(--text-color);
+}
+a[href] {
+  color: var(--link-color);
+}
+a[href]:hover {
+  text-decoration: underline;
+}
+a[href].selfRef:hover {
+  background-color: var(--highlight-color);
+}
+a.xref {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px 'Oxygen Mono', monospace;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+}
+figure blockquote {
+  margin: 0.8em 0.4em 0.4em;
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+}
+@media screen {
+  pre {
+    display: inline-block;
+    overflow-x: auto;
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  pre + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+  table {
+    display: inline-block;
+    overflow-x: auto;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  background-color: var(--highlight-color);
+  border: 1px solid var(--line-color);
+  border-radius: 3px;
+  margin: 1em 0;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+}
+table.right {
+  margin-left: auto;
+}
+table.center {
+  margin-left: auto;
+  margin-right: auto;
+}
+table.left {
+  margin-right: auto;
+}
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+tr:nth-child(2n) > td {
+  background-color: var(--background-color);
+}
+tr:nth-child(2n+1) > td {
+  background-color: var(--highlight-color);
+}
+thead+tbody > tr:nth-child(2n) > td {
+  background-color: var(--highlight-color);
+}
+thead+tbody > tr:nth-child(2n+1) > td {
+  background-color: var(--background-color);
+}
+table caption {
+  margin: 0;
+  padding: 3px 0 3px 1em;
+}
+table p {
+  margin: 0;
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  visibility: hidden;
+  user-select: none;
+}
+a.pilcrow[href] { color: #ddd; }
+a.pilcrow[href]:hover { text-decoration: none; }
+@media screen {
+  :hover > a.pilcrow {
+    visibility: visible;
+  }
+  a.pilcrow:hover {
+    background-color: transparent;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+}
+
+.role {
+  font-variant: all-small-caps;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 8em;
+}
+#identifiers dt {
+  width: var(--identifier-width);
+  margin: 0;
+  clear: left;
+  float: left;
+  text-align: right;
+}
+#identifiers dd {
+  margin: 0 0 0 calc(1em + var(--identifier-width));
+  min-width: 5em;
+}
+#identifiers .authors .author {
+  display: inline-block;
+  margin-right: 1.5em;
+}
+#identifiers .authors .org {
+  font-style: italic;
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+}
+.docInfo .prepared {
+  float: left;
+}
+.docInfo .prepared {
+  float: right;
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+}
+#toc nav ul {
+  margin: 0 0.5em 0 0;
+  padding: 0;
+  list-style: none;
+}
+#toc nav li {
+  line-height: 1.3em;
+  margin: 0.75em 0;
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+#toc a.xref {
+  white-space: normal;
+}
+/* references */
+.references dt {
+  text-align: right;
+  font-weight: bold;
+  min-width: 7em;
+}
+.references dd {
+  margin-left: 8em;
+  overflow: auto;
+}
+
+.refInstance {
+  margin-bottom: 1.25em;
+}
+
+.references .ascii {
+  margin-bottom: 0.25em;
+}
+
+/* index */
+.index ul {
+  margin: 0 0 0 1em;
+  padding: 0;
+  list-style: none;
+}
+.index ul ul {
+  margin: 0;
+}
+.index li {
+  margin: 0;
+  text-indent: -2em;
+  padding-left: 2em;
+  padding-bottom: 5px;
+}
+.indexIndex {
+  margin: 0.5em 0 1em;
+}
+.index a {
+  font-weight: 700;
+}
+/* make the index two-column on all but the smallest screens */
+@media (min-width: 500px) {
+  .index ul {
+    column-count: 2;
+    column-gap: 20px;
+  }
+  .index ul ul {
+    column-count: 1;
+    column-gap: 0;
+  }
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  margin: 1em 0;
+}
+address.vcard .nameRole {
+  font-weight: 700;
+  margin-left: 0;
+}
+address.vcard .label {
+  margin: 0.5em 0;
+}
+address.vcard .type {
+  display: none;
+}
+.alternative-contact {
+  margin: 1.5em 0 1em;
+}
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses > section {
+    column-count: 2;
+    column-gap: 20px;
+  }
+  #authors-addresses > section > h2 {
+    column-span: all;
+  }
+  /* hack for break-inside: avoid-column */
+  #authors-addresses address {
+    display: inline-block;
+    break-inside: avoid-column;
+  }
+}
+
+.rfcEditorRemove p:first-of-type {
+  font-style: italic;
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+/* alternative layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+  }
+  #toc.active {
+      opacity: 1;
+  }
+  #toc h2 {
+    margin: 0;
+    padding: 2px 0 2px 6px;
+    padding-right: 1em;
+    font-size: 18px;
+    line-height: 24px;
+    min-width: 190px;
+    text-align: right;
+    background-color: #444;
+    color: white;
+    cursor: pointer;
+  }
+  #toc h2::before { /* css hamburger */
+    float: right;
+    position: relative;
+    width: 1em;
+    height: 1px;
+    left: -164px;
+    margin: 8px 0 0 0;
+    background: white none repeat scroll 0 0;
+    box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+    content: "";
+  }
+  #toc nav {
+    display: none;
+    background-color: var(--background-color);
+    padding: 0.5em 1em 1em;
+    overflow: auto;
+    overscroll-behavior: contain;
+    height: calc(100vh - 48px);
+    border-left: 1px solid #ddd;
+  }
+  #toc.active nav {
+    display: block;
+  }
+  /* Make the collapsed ToC header render white on gray also when it's a link */
+  #toc h2 a,
+  #toc h2 a:link,
+  #toc h2 a:focus,
+  #toc h2 a:hover,
+  #toc a.toplink,
+  #toc a.toplink:hover {
+    color: white;
+    background-color: #444;
+    text-decoration: none;
+  }
+  #toc a.toplink {
+    margin-top: 2px;
+  }
+}
+
+/* alternative layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+  }
+  #toc h2 {
+    margin: 0;
+    padding: 0.25em 1em 1em 0;
+  }
+  #toc nav {
+    display: block;
+    height: calc(90vh - 84px);
+    bottom: 0;
+    padding: 0.5em 0 2em;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+  #toc nav > ul  {
+    margin-bottom: 2em;
+  }
+  #toc ul {
+    margin: 0 0 0 4px;
+    font-size: var(--small-font-size);
+  }
+  #toc ul p, #toc ul li {
+    margin: 2px 0;
+    line-height: 22px;
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc, #n-introduction {
+    page-break-before: always;
+  }
+  #toc {
+    border-top: none;
+    padding-top: 0;
+  }
+  figure, pre {
+    page-break-inside: avoid;
+  }
+  figure {
+    overflow: scroll;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  h2+*, h3+*, h4+*, h5+*, h6+* {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Changes introduced to fix issues found during implementation */
+
+/* Separate body from document info even without intervening H1 */
+section {
+  clear: both;
+}
+
+/* Top align author divs, to avoid names without organization dropping level with org names */
+.author {
+  vertical-align: top;
+}
+
+/* Style section numbers with more space between number and title */
+.section-number {
+  padding-right: 0.5em;
+}
+
+/* Add styling for a link in the ToC that points to the top of the document */
+a.toplink {
+  float: right;
+  margin: 8px 0.5em 0;
+}
+
+/* Fix the dl styling to match the RFC 7992 attributes */
+dl > dt,
+dl.dlParallel > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl.dlNewline > dt {
+  float: none;
+}
+
+/* Provide styling for table cell text alignment */
+table .text-left, table .text-left {
+  text-align: left;
+}
+table .text-center, table .text-center {
+  text-align: center;
+}
+table .text-right, table .text-right {
+  text-align: right;
+}
+
+/* Make the alternative author contact information look less like just another
+   author, and group it closer with the primary author contact information */
+.alternative-contact {
+  margin: 0.5em 0 0.25em 0;
+}
+address .non-ascii {
+  margin: 0 0 0 2em;
+}
+
+/* With it being possible to set tables with alignment
+  left, center, and right, { width: 100%; } does not make sense */
+table {
+  width: auto;
+}
+
+/* Avoid reference text that sits in a block with very wide left margin,
+   because of a long floating dt label.*/
+.references dd {
+  overflow: visible;
+}
+
+/* Control caption placement */
+caption {
+  caption-side: bottom;
+}
+
+/* Limit the width of the author address vcard, so names in right-to-left
+   script don't end up on the other side of the page. */
+
+address.vcard {
+  max-width: 20em;
+  margin-right: auto;
+}
+
+/* For address alignment dependent on LTR or RTL scripts */
+address div.left {
+  text-align: left;
+}
+address div.right {
+  text-align: right;
+}
+
+/* Give the table caption label the same styling as the figcaption */
+
+@media print {
+  .toplink {
+    display: none;
+  }
+
+  /* avoid overwriting the top border line with the ToC header */
+  #toc {
+    padding-top: 1px;
+  }
+
+  /* Avoid page breaks inside dl and author address entries */
+  dd {
+    page-break-before: avoid;
+  }
+  .vcard {
+    page-break-inside: avoid;
+  }
+
+}
+/* Tweak the bcp14 keyword presentation */
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+</style>
 
 </head>
-
 <body>
-
-  <table class="header">
-    <tbody>
-    
-    	<tr>
-<td class="left">CoRE Working Group</td>
-<td class="right">I. Jarvinen</td>
-</tr>
-<tr>
+<table class="ears">
+<thead><tr>
 <td class="left">Internet-Draft</td>
-<td class="right">M. Kojo</td>
-</tr>
-<tr>
-<td class="left">Intended status: Experimental</td>
-<td class="right">I. Raitahila</td>
-</tr>
-<tr>
-<td class="left">Expires: October 2, 2020</td>
-<td class="right">University of Helsinki</td>
-</tr>
-<tr>
-<td class="left"></td>
-<td class="right">Z. Cao</td>
-</tr>
-<tr>
-<td class="left"></td>
-<td class="right">Huawei</td>
-</tr>
-<tr>
-<td class="left"></td>
-<td class="right">March 31, 2020</td>
-</tr>
+<td class="center">Fast-Slow RTO and CC Algorithm</td>
+<td class="right">October 2020</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Jarvinen, et al.</td>
+<td class="center">Expires 22 April 2021</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">CoRE Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-ietf-core-fasor-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2020-10-19" class="published">19 October 2020</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Experimental</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2021-04-22">22 April 2021</time></dd>
+<dt class="label-authors">Authors:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">I. Jarvinen</div>
+<div class="org">University of Helsinki</div>
+</div>
+<div class="author">
+      <div class="author-name">M. Kojo</div>
+<div class="org">University of Helsinki</div>
+</div>
+<div class="author">
+      <div class="author-name">I. Raitahila</div>
+<div class="org">University of Helsinki</div>
+</div>
+<div class="author">
+      <div class="author-name">Z. Cao</div>
+<div class="org">Huawei</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Fast-Slow Retransmission Timeout and Congestion Control Algorithm for CoAP</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document specifies an alternative retransmission timeout and
+congestion control back off algorithm for
+the CoAP protocol, called Fast-Slow RTO (FASOR).<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-2">The algorithm specified in this document employs
+an appropriate and large enough back off of Retransmission Timeout (RTO)
+as the major congestion control mechanism to allow acquiring unambiguous
+RTT samples with high probability
+and to prevent building a persistent queue when retransmitting.
+The algorithm also aims to retransmit quickly
+using an accurately managed retransmission timeout when
+link-errors are occuring, basing RTO calculation
+on unambiguous round-trip time (RTT) samples.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 22 April 2021.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2020 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Simplified BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Simplified BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="ulEmpty toc compact">
+<li class="ulEmpty toc compact" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="xref">1</a>.  <a href="#name-introduction" class="xref">Introduction</a><a href="#section-toc.1-1.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="ulEmpty toc compact" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="xref">2</a>.  <a href="#name-conventions" class="xref">Conventions</a><a href="#section-toc.1-1.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="ulEmpty toc compact" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="xref">3</a>.  <a href="#name-problems-with-existing-coap" class="xref">Problems with Existing CoAP Congestion Control Algorithms</a><a href="#section-toc.1-1.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="ulEmpty toc compact" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="xref">4</a>.  <a href="#name-fasor-algorithm" class="xref">FASOR Algorithm</a><a href="#section-toc.1-1.4.1" class="pilcrow">¶</a></p>
+<ul class="ulEmpty toc compact">
+<li class="ulEmpty toc compact" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="xref">4.1</a>.  <a href="#name-computing-normal-rto-fastrt" class="xref">Computing Normal RTO (FastRTO)</a><a href="#section-toc.1-1.4.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="ulEmpty toc compact" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="xref">4.2</a>.  <a href="#name-slow-rto" class="xref">Slow RTO</a><a href="#section-toc.1-1.4.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="ulEmpty toc compact" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="xref">4.3</a>.  <a href="#name-retransmission-timeout-back" class="xref">Retransmission Timeout Back Off Logic</a><a href="#section-toc.1-1.4.2.3.1" class="pilcrow">¶</a></p>
+<ul class="ulEmpty toc compact">
+<li class="ulEmpty toc compact" id="section-toc.1-1.4.2.3.2.1">
+                    <p id="section-toc.1-1.4.2.3.2.1.1"><a href="#section-4.3.1" class="xref">4.3.1</a>.  <a href="#name-overview" class="xref">Overview</a><a href="#section-toc.1-1.4.2.3.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                  <li class="ulEmpty toc compact" id="section-toc.1-1.4.2.3.2.2">
+                    <p id="section-toc.1-1.4.2.3.2.2.1"><a href="#section-4.3.2" class="xref">4.3.2</a>.  <a href="#name-retransmission-state-machin" class="xref">Retransmission State Machine</a><a href="#section-toc.1-1.4.2.3.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                </ul>
+</li>
+              <li class="ulEmpty toc compact" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="xref">4.4</a>.  <a href="#name-retransmission-count-option" class="xref">Retransmission Count Option</a><a href="#section-toc.1-1.4.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="ulEmpty toc compact" id="section-toc.1-1.4.2.5">
+                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="xref">4.5</a>.  <a href="#name-alternatives-for-exchanging" class="xref">Alternatives for Exchanging Retransmission Count Information</a><a href="#section-toc.1-1.4.2.5.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+</li>
+          <li class="ulEmpty toc compact" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="xref">5</a>.  <a href="#name-security-considerations" class="xref">Security Considerations</a><a href="#section-toc.1-1.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="ulEmpty toc compact" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="xref">6</a>.  <a href="#name-iana-considerations" class="xref">IANA Considerations</a><a href="#section-toc.1-1.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="ulEmpty toc compact" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="xref">7</a>.  <a href="#name-references" class="xref">References</a><a href="#section-toc.1-1.7.1" class="pilcrow">¶</a></p>
+<ul class="ulEmpty toc compact">
+<li class="ulEmpty toc compact" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="xref">7.1</a>.  <a href="#name-normative-references" class="xref">Normative References</a><a href="#section-toc.1-1.7.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="ulEmpty toc compact" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="xref">7.2</a>.  <a href="#name-informative-references" class="xref">Informative References</a><a href="#section-toc.1-1.7.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+</li>
+          <li class="ulEmpty toc compact" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-appendix.a" class="xref">Appendix A</a>.  <a href="#name-pseudocode-for-basic-fasor-" class="xref">Pseudocode for Basic FASOR without Dithering</a><a href="#section-toc.1-1.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="ulEmpty toc compact" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-appendix.b" class="xref"></a><a href="#name-authors-addresses" class="xref">Authors' Addresses</a><a href="#section-toc.1-1.9.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">
+        CoAP senders use retransmission timeout (RTO) to infer losses that have
+        occurred in the network. For such a heuristic to be correct, the RTT
+        estimate used for calculating the retransmission timeout must match
+        to the real end-to-end path characteristics. Otherwise, unnecessary
+        retransmission may occur. Both default RTO mechanism for CoAP
+        <span>[<a href="#RFC7252" class="xref">RFC7252</a>]</span> and CoCoA <span>[<a href="#I-D.ietf-core-cocoa" class="xref">I-D.ietf-core-cocoa</a>]</span>
+        have issues in dealing with unnecessary retransmissions and in the
+        worst-case the situation can persist causing congestion collapse
+        <span>[<a href="#JRCK18a" class="xref">JRCK18a</a>]</span>.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">
+        This document specifies FASOR retransmission timeout and congestion
+        control algorithm <span>[<a href="#JRCK18b" class="xref">JRCK18b</a>]</span>. FASOR algorithm ensures
+        unnecessary
+        retransmissions that a sender may have sent due to an inaccurate RTT
+        estimate will not persist avoiding the threat of congestion
+        collapse. FASOR also aims to quickly restore the accuracy of the
+        RTT estimate. Armed with an accurate RTT estimate, FASOR not only
+        handles congestion robustly but also can quickly infer losses due
+        to link errors.<a href="#section-1-2" class="pilcrow">¶</a></p>
+</section>
+<section id="section-2">
+      <h2 id="name-conventions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions" class="section-name selfRef">Conventions</a>
+      </h2>
+<p id="section-2-1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+      "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+      document are to be interpreted as described in BCP 14, RFC 2119 <span>[<a href="#RFC2119" class="xref">RFC2119</a>]</span>.<a href="#section-2-1" class="pilcrow">¶</a></p>
+</section>
+<section id="section-3">
+      <h2 id="name-problems-with-existing-coap">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-problems-with-existing-coap" class="section-name selfRef">Problems with Existing CoAP Congestion Control Algorithms</a>
+      </h2>
+<p id="section-3-1">
+        Correctly inferring losses requires the retransmission timeout (RTO)
+        to be longer than the real RTT in the network. Under certain
+        circumstances the RTO may be incorrectly small. If the real
+        end-to-end RTT is larger than the retransmission timeout, it is
+        impossible for the sender to avoid making unnecessary retransmissions
+        that duplicate data still existing in the network because the sender
+        cannot receive any feedback in time. 
+        Unnecessary retransmissions
+        cause two basic problems. First, they increase the perceived
+        end-to-end RTT if the bottleneck has buffering capacity, and second,
+        they prevent getting unambiguous RTT samples.
+        Making
+        unnecessary retransmissions is also a pre-condition for the congestion
+        collapse <span>[<a href="#RFC0896" class="xref">RFC0896</a>]</span>, which may occur in the worst case 
+        if retransmissions are not well controlled <span>[<a href="#JRCK18a" class="xref">JRCK18a</a>]</span>.
+        Therefore, the sender retransmission timeout algorithm should actively
+        attempt to prevent unnecessary retransmissions from persisting under any
+        circumstance.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">
+        Karn's algorithm <span>[<a href="#KP87" class="xref">KP87</a>]</span> has prevented unnecessary
+        retransmission from turning into congestion collapse for
+        decades due to robust RTT estimation and retransmission timeout
+        backoff handling.
+        The recent CoAP congestion control algorithms, however,
+        diverge from the principles of Karn's algorithm in significant
+        ways and may pose a threat to the stability of the Internet
+        due to those differences.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">
+        The default RTO mechanism for CoAP <span>[<a href="#RFC7252" class="xref">RFC7252</a>]</span> uses
+        only an initial RTO dithered between 2 and 3 seconds, while
+        CoCoA <span>[<a href="#I-D.ietf-core-cocoa" class="xref">I-D.ietf-core-cocoa</a>]</span> measures RTT
+        both from unambiguous and ambiguous RTT samples and applies a
+        modified version of the TCP RTO algorithm <span>[<a href="#RFC6298" class="xref">RFC6298</a>]</span>.
 
-    	
-    </tbody>
-  </table>
+        The algorithm in RFC 7252 lacks solution to
+        persistent congestion.
+        The binary exponential back off used for the retransmission timeout
+        does not properly address unnecessary retransmissions
+        when RTT is larger than the default RTO (ACK_TIMEOUT). If the
+        CoAP sender performs exchanges over an end-to-end
+        path with such a high RTT, it persistently keeps making unnecessary
+        retransmissions for every exchange wasting some fraction of the
+        used resources (network capacity, battery power).<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">
+        CoCoA <span>[<a href="#I-D.ietf-core-cocoa" class="xref">I-D.ietf-core-cocoa</a>]</span> attempts to improve
+        scenarios with link-error related losses and solve persistent
+        congestion
+        by basing its RTO value on an estimated
+        RTT. However, there are couple
+        of exceptions when the RTT estimation is not available:<a href="#section-3-4" class="pilcrow">¶</a></p>
+<ul class="ulEmpty normal">
+<li class="ulEmpty normal" id="section-3-5.1">- At the beginning of a flow where initial RTO of 2 seconds
+             is used.<a href="#section-3-5.1" class="pilcrow">¶</a>
+</li>
+        <li class="ulEmpty normal" id="section-3-5.2">- When RTT suddenly jumps high enough to trigger the rule in
+             CoCoA that prevents taking RTT samples when more than two
+             retransmissions are needed. 
+             This may also occur when the packet drop rate on the path is high enough.<a href="#section-3-5.2" class="pilcrow">¶</a>
+</li>
+      </ul>
+<p id="section-3-6">
+ When RTT estimate is too small, unnecessary retransmission will
+ occur also with CoCoA.
 
-  <p class="title">Fast-Slow Retransmission Timeout and Congestion Control Algorithm for CoAP<br />
-  <span class="filename">draft-ietf-core-fasor-latest</span></p>
-  
-  <h1 id="rfc.abstract"><a href="#rfc.abstract">Abstract</a></h1>
-<p>This document specifies an alternative retransmission timeout and congestion control back off algorithm for the CoAP protocol, called Fast-Slow RTO (FASOR).</p>
-<p>The algorithm specified in this document employs an appropriate and large enough back off of Retransmission Timeout (RTO) as the major congestion control mechanism to allow acquiring unambiguous RTT samples with high probability and to prevent building a persistent queue when retransmitting.  The algorithm also aims to retransmit quickly using an accurately managed retransmission timeout when link-errors are occuring, basing RTO calculation on unambiguous round-trip time (RTT) samples.  </p>
-<h1 id="rfc.status"><a href="#rfc.status">Status of This Memo</a></h1>
-<p>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</p>
-<p>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF).  Note that other groups may also distribute working documents as Internet-Drafts.  The list of current Internet-Drafts is at https://datatracker.ietf.org/drafts/current/.</p>
-<p>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time.  It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."</p>
-<p>This Internet-Draft will expire on October 2, 2020.</p>
-<h1 id="rfc.copyrightnotice"><a href="#rfc.copyrightnotice">Copyright Notice</a></h1>
-<p>Copyright (c) 2020 IETF Trust and the persons identified as the document authors.  All rights reserved.</p>
-<p>This document is subject to BCP 78 and the IETF Trust's Legal Provisions Relating to IETF Documents (https://trustee.ietf.org/license-info) in effect on the date of publication of this document.  Please review these documents carefully, as they describe your rights and restrictions with respect to this document.  Code Components extracted from this document must include Simplified BSD License text as described in Section 4.e of the Trust Legal Provisions and are provided without warranty as described in the Simplified BSD License.</p>
+        CoCoA being unable to take RTT samples at all is a particularly
+        problematic phenomenon as it is similarly
+        persisting state as with the algorithm outlined in RFC 7252
+        and the network remains in a congestion collapsed state due
+        to persisting unnecessary retransmissions.<a href="#section-3-6" class="pilcrow">¶</a></p>
+</section>
+<section id="section-4">
+      <h2 id="name-fasor-algorithm">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-fasor-algorithm" class="section-name selfRef">FASOR Algorithm</a>
+      </h2>
+<p id="section-4-1">
+        FASOR <span>[<a href="#JRCK18b" class="xref">JRCK18b</a>]</span> is composed of three key
+        components: RTO computation,
+        Slow RTO, and novel retransmission timeout back off logic.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<section id="section-4.1">
+        <h3 id="name-computing-normal-rto-fastrt">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-computing-normal-rto-fastrt" class="section-name selfRef">Computing Normal RTO (FastRTO)</a>
+        </h3>
+<p id="section-4.1-1">
+        The FASOR algorithm measures the RTT for an CoAP message exchange over an end-to-end path
+        and computes the RTO value using
+        the TCP RTO algorithm specified in <span>[<a href="#RFC6298" class="xref">RFC6298</a>]</span>.
+        We call this normal RTO or FastRTO.
+        In contrast to the TCP RTO mechanism, FASOR SHOULD NOT use
+        1 second lower-bound when setting the RTO because RTO is
+        only a backup mechanisms for loss detection with TCP, whereas with CoAP
+        RTO is the primary and only loss detection mechanism. A lower-bound of
+        1 second would impact timeliness of the loss detection in
+        low RTT environments. The RTO value MAY be upper-bounded by at least 60 seconds.
 
-  
-  <hr class="noprint" />
-  <h1 class="np" id="rfc.toc"><a href="#rfc.toc">Table of Contents</a></h1>
-  <ul class="toc">
+        A CoAP sender using the FASOR algorithm SHOULD set initial RTO
+        to 2 seconds. The computed RTO value as well as the initial RTO
+        value is subject to dithering; they are dithered between RTO + 1/4 x
+        SRTT and RTO + SRTT. For dithering initial RTO, SRTT is unset;
+        therefore, SRTT is replaced with initial RTO / 3 which is derived
+        from the RTO formula and equals to
+        a hypothetical initial RTT that would yield the initial RTO
+        using the SRTT and RTTVAR initialization rule of RFC 6298.
+        That is, for initial RTO of 2 seconds we use SRTT value of 2/3 seconds.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">
+        FastRTO is updated only with unambiguous RTT samples.
+        Therefore, it closely tracks the actual RTT of the network and can
+        quickly trigger a retransmission when the network state is not dubious.
+        Retransmitting without extra delay is very useful when the
+        end-to-end path is subject to losses that are unrelated to
+        congestion.
 
-  	<li>1.   <a href="#rfc.section.1">Introduction</a>
-</li>
-<li>2.   <a href="#rfc.section.2">Conventions</a>
-</li>
-<li>3.   <a href="#rfc.section.3">Problems with Existing CoAP Congestion Control Algorithms</a>
-</li>
-<li>4.   <a href="#rfc.section.4">FASOR Algorithm</a>
-</li>
-<ul><li>4.1.   <a href="#rfc.section.4.1">Computing Normal RTO (FastRTO)</a>
-</li>
-<li>4.2.   <a href="#rfc.section.4.2">Slow RTO</a>
-</li>
-<li>4.3.   <a href="#rfc.section.4.3">Retransmission Timeout Back Off Logic</a>
-</li>
-<ul><li>4.3.1.   <a href="#rfc.section.4.3.1">Overview</a>
-</li>
-<li>4.3.2.   <a href="#rfc.section.4.3.2">Retransmission State Machine</a>
-</li>
-</ul><li>4.4.   <a href="#rfc.section.4.4">Retransmission Count Option</a>
-</li>
-<li>4.5.   <a href="#rfc.section.4.5">Alternatives for Exchanging Retransmission Count Information</a>
-</li>
-</ul><li>5.   <a href="#rfc.section.5">Security Considerations</a>
-</li>
-<li>6.   <a href="#rfc.section.6">IANA Considerations</a>
-</li>
-<li>7.   <a href="#rfc.references">References</a>
-</li>
-<ul><li>7.1.   <a href="#rfc.references.1">Normative References</a>
-</li>
-<li>7.2.   <a href="#rfc.references.2">Informative References</a>
-</li>
-</ul><li>Appendix A.   <a href="#rfc.appendix.A">Pseudocode for Basic FASOR without Dithering</a>
-</li>
-<li><a href="#rfc.authors">Authors' Addresses</a>
-</li>
+        When the first unambiguous RTT sample is received, the RTT estimator
+        is initialized with that sample as specified in
+        <span>[<a href="#RFC6298" class="xref">RFC6298</a>]</span> except RTTVAR that is set to R/2K.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+</section>
+<div id="sec_slowrto">
+<section id="section-4.2">
+        <h3 id="name-slow-rto">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-slow-rto" class="section-name selfRef">Slow RTO</a>
+        </h3>
+<p id="section-4.2-1">
+        We introduce Slow RTO as a 
+        safe way to ensure that only a unique copy of message is sent
+        before at least one RTT has elapsed. To achieve this the sender must ensure that
+        its retransmission timeout is set to a value that is larger than
+        the path end-to-end RTT that may be inflated by the unnecessary
+        retransmission themselves. 
 
+        Therefore, whenever a message needs to be retransmitted, we
+        measure Slow RTO as the elapsed time required for getting an acknowledgement.
+        That is, Slow RTO is measured starting from the original transmission of the
+        request message until the receipt of the acknowledgement, regardless
+        of the number of retransmissions.
+        In this way, Slow RTO always covers the worst-case RTT during which a
+        number of unnecessary retransmissions were made but the
+        acknowledgement is received for the original transmission. 
 
-  </ul>
+        In contrast to computing normal RTO, Slow RTO is not smoothed because it is
+        derived from the sending pattern of the retransmissions (that may
+        turn out unnecessary). In order to drain the potential unnecessary 
+        retransmissions successfully from the network, it makes sense to wait for the time used for sending
+        them rather than some smoothed value. 
+        However, Slow RTO is multiplied by a factor to allow some growth in load
+        without making Slow RTO too aggressive (by default the factor of 1.5 is used).
+        
+        FASOR
+        then applies Slow RTO as one of the backed off timer values used
+        with the next request message.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">
+        Slow RTO allows rapidly converging
+        towards stable operating point because 1) it lets the duplicate copies
+        sent earlier to drain from the network reducing the perceived
+        end-to-end RTT, and 2) allows enough time to acquire an unambiguous
+        RTT sample for
+        the RTO computation. Robustly acquiring the RTT sample ensures that
+        the next RTO is set according to the recent measurement and further
+        unnecessary retransmissions are avoided.
 
-  <h1 id="rfc.section.1">
-<a href="#rfc.section.1">1.</a> Introduction</h1>
-<p id="rfc.section.1.p.1">CoAP senders use retransmission timeout (RTO) to infer losses that have occurred in the network. For such a heuristic to be correct, the RTT estimate used for calculating the retransmission timeout must match to the real end-to-end path characteristics. Otherwise, unnecessary retransmission may occur. Both default RTO mechanism for CoAP <a href="#RFC7252" class="xref">[RFC7252]</a> and CoCoA <a href="#I-D.ietf-core-cocoa" class="xref">[I-D.ietf-core-cocoa]</a> have issues in dealing with unnecessary retransmissions and in the worst-case the situation can persist causing congestion collapse <a href="#JRCK18a" class="xref">[JRCK18a]</a>.  </p>
-<p id="rfc.section.1.p.2">This document specifies FASOR retransmission timeout and congestion control algorithm <a href="#JRCK18b" class="xref">[JRCK18b]</a>. FASOR algorithm ensures unnecessary retransmissions that a sender may have sent due to an inaccurate RTT estimate will not persist avoiding the threat of congestion collapse. FASOR also aims to quickly restore the accuracy of the RTT estimate. Armed with an accurate RTT estimate, FASOR not only handles congestion robustly but also can quickly infer losses due to link errors.  </p>
-<h1 id="rfc.section.2">
-<a href="#rfc.section.2">2.</a> Conventions</h1>
-<p id="rfc.section.2.p.1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14, RFC 2119 <a href="#RFC2119" class="xref">[RFC2119]</a>.</p>
-<h1 id="rfc.section.3">
-<a href="#rfc.section.3">3.</a> Problems with Existing CoAP Congestion Control Algorithms</h1>
-<p id="rfc.section.3.p.1">Correctly inferring losses requires the retransmission timeout (RTO) to be longer than the real RTT in the network. Under certain circumstances the RTO may be incorrectly small. If the real end-to-end RTT is larger than the retransmission timeout, it is impossible for the sender to avoid making unnecessary retransmissions that duplicate data still existing in the network because the sender cannot receive any feedback in time.  Unnecessary retransmissions cause two basic problems. First, they increase the perceived end-to-end RTT if the bottleneck has buffering capacity, and second, they prevent getting unambiguous RTT samples.  Making unnecessary retransmissions is also a pre-condition for the congestion collapse <a href="#RFC0896" class="xref">[RFC0896]</a>, which may occur in the worst case if retransmissions are not well controlled <a href="#JRCK18a" class="xref">[JRCK18a]</a>.  Therefore, the sender retransmission timeout algorithm should actively attempt to prevent unnecessary retransmissions from persisting under any circumstance.  </p>
-<p id="rfc.section.3.p.2">Karn's algorithm <a href="#KP87" class="xref">[KP87]</a> has prevented unnecessary retransmission from turning into congestion collapse for decades due to robust RTT estimation and retransmission timeout backoff handling.  The recent CoAP congestion control algorithms, however, diverge from the principles of Karn's algorithm in significant ways and may pose a threat to the stability of the Internet due to those differences.  </p>
-<p id="rfc.section.3.p.3">The default RTO mechanism for CoAP <a href="#RFC7252" class="xref">[RFC7252]</a> uses only an initial RTO dithered between 2 and 3 seconds, while CoCoA <a href="#I-D.ietf-core-cocoa" class="xref">[I-D.ietf-core-cocoa]</a> measures RTT both from unambiguous and ambiguous RTT samples and applies a modified version of the TCP RTO algorithm <a href="#RFC6298" class="xref">[RFC6298]</a>.  The algorithm in RFC 7252 lacks solution to persistent congestion.  The binary exponential back off used for the retransmission timeout does not properly address unnecessary retransmissions when RTT is larger than the default RTO (ACK_TIMEOUT). If the CoAP sender performs exchanges over an end-to-end path with such a high RTT, it persistently keeps making unnecessary retransmissions for every exchange wasting some fraction of the used resources (network capacity, battery power).  </p>
-<p id="rfc.section.3.p.4">CoCoA <a href="#I-D.ietf-core-cocoa" class="xref">[I-D.ietf-core-cocoa]</a> attempts to improve scenarios with link-error related losses and solve persistent congestion by basing its RTO value on an estimated RTT. However, there are couple of exceptions when the RTT estimation is not available:</p>
+        Slow RTO
+        itself is a form of back off because it includes the
+        accumulated time from the retransmission timeout back off of the previous
+        exchange. FASOR uses this for its advantage as the time included
+        into Slow RTO is what is needed to drain all unnecessary
+        retransmissions possibly made during the previous exchange.
+        Assuming a stable RTT and that all of the retransmissions were
+        unnecessary, the time to drain them is the time elapsed from the
+        original transmission to the sending time of the last
+        retransmission plus one RTT. When the 
+        acknowledgement for the original transmission arrives,
+        one RTT has already elapsed, leaving only the sending time
+        difference still unaccounted for which is at minimum the
+        value for Slow RTO (when an RTT sample arrives
+        immediately
+        after the last retransmission). Even if RTT would be increasing,
+        the draining still occurs
+        rapidly due to exponentially backed off frequency in sending the
+        unnecessary retransmissions.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<section id="section-4.3">
+        <h3 id="name-retransmission-timeout-back">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-retransmission-timeout-back" class="section-name selfRef">Retransmission Timeout Back Off Logic</a>
+        </h3>
+<section id="section-4.3.1">
+          <h4 id="name-overview">
+<a href="#section-4.3.1" class="section-number selfRef">4.3.1. </a><a href="#name-overview" class="section-name selfRef">Overview</a>
+          </h4>
+<p id="section-4.3.1-1">
+        FASOR uses normal RTO as the base for binary exponential back off
+        when no retransmission were needed for
+        the previous CoAP message exchange.
+        When retransmission were needed for the previous CoAP message exchange,
+        the algorithm rules, however, are more
+        complicated than with the traditional RTO back off because Slow
+        RTO is injected into the back off series to reduce high impact
+        of using Slow RTO. FASOR logic chooses
+        from three possible back off series alternatives:<a href="#section-4.3.1-1" class="pilcrow">¶</a></p>
+<ul class="ulEmpty normal">
+<li class="ulEmpty normal" id="section-4.3.1-2.1">FAST back off: Perform traditional RTO back off with the normal RTO
+             as the base. Applied when the previous message was not retransmitted.<a href="#section-4.3.1-2.1" class="pilcrow">¶</a>
+</li>
+            <li class="ulEmpty normal" id="section-4.3.1-2.2">FAST_SLOW_FAST back off: First perform a probe using the normal RTO
+             for the original transmission of the request message
+             to improve cases with losses unrelated to congestion.
+             If the probe for the original transmission of the request message
+             is successful without retransmissions, continue with FAST
+             back off for the next message exchange.
+             If the request message needs to be retransmitted, 
+             continue by using Slow RTO for the first retransmission in order to 
+             respond to congestion and drain the
+             network from the unnecessary retransmissions that were
+             potentially sent for the previous exchange. If still
+             further RTOs are needed, continue by backing off the
+             normal RTO further on each timeout. FAST_SLOW_FAST back off is applied just once
+             when the previous request message using FAST back off required one or more retransmissions.<a href="#section-4.3.1-2.2" class="pilcrow">¶</a>
+</li>
+            <li class="ulEmpty normal" id="section-4.3.1-2.3">SLOW_FAST back off: Perform Slow RTO first for the original 
+             transmisssion to respond to congestion and to acquire an
+             unambiguous RTT sample with high probability. Then, 
+             if the original request needs to be retransmitted,
+             continue with the normal RTO-based RTO back off
+             serie by backing off the normal RTO on each timeout. 
+             SLOW_FAST back off is applied
+             when the previous request message using FAST_SLOW_FAST or 
+             SLOW_FAST 
+             back off required one or more retransmissions.
+             Once an acknowledgement for the original transmission with
+             unambigous RTT sample is received, continue with FAST
+             back off for the next message exchange.<a href="#section-4.3.1-2.3" class="pilcrow">¶</a>
+</li>
+          </ul>
+<p id="section-4.3.1-3">
+        For the initial message, FAST is used with INITIAL_RTO
+        as the FastRTO value. From there on, state is updated when an
+        acknowledgement arrives.
+        Following unambiguous RTT samples, FASOR always
+        uses FAST. Whenever retransmissions are needed, the back off
+        series selection is first downgraded to FAST_SLOW_FAST back off 
+        and then to SLOW_FAST back off if further retransmission are needed
+        in FAST_SLOW_FAST.<a href="#section-4.3.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-4">
+        When Slow RTO is used as the first RTO value, the sender
+        is likely to acquire unambiguous RTT sample even when the network
+        has high delay due to congestion because Slow RTO is based on a
+        very recent measurement of the worst-case RTT. However, using
+        Slow RTO may
+        negatively impact the
+        performance when losses unrelated to congestion are occurring.
+        Due to its potential high cost, FASOR algorithm attempts to avoid
+        using Slow RTO unnecessarily.<a href="#section-4.3.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-5">
+        The CoAP protocol is often used by devices that are connected
+        through a wireless network where non-congestion related losses
+        are much more frequent than in their wired counterparts. This has
+        implications for the retransmission timeout algorithm. While it
+        would be possible to implement FASOR such that it immediately
+        uses Slow RTO when a dubious network state is detected, which
+        would handle congestion very well, it would
+        do significant harm for performance when RTOs occur due to
+        non-congestion related losses.
 
-<ul class="empty">
-<li>- At the beginning of a flow where initial RTO of 2 seconds is used.</li>
-<li>- When RTT suddenly jumps high enough to trigger the rule in CoCoA that prevents taking RTT samples when more than two retransmissions are needed.  This may also occur when the packet drop rate on the path is high enough.</li>
-</ul>
+        Instead, FASOR uses first normal RTO for one transmission and only
+        responds using Slow RTO if RTO expires also for that
+        request message. Such a pattern
+        quickly probes if the losses were unrelated to congestion and
+        only slightly delays response if real congestion event is taking
+        place. To ensure that an unambiguous RTT sample is also acquired
+        on a congested network path,
+        FASOR then needs to use Slow RTO for the original transmission of
+        the subsequent packet if the probe was not successful.<a href="#section-4.3.1-5" class="pilcrow">¶</a></p>
+</section>
+<section id="section-4.3.2">
+          <h4 id="name-retransmission-state-machin">
+<a href="#section-4.3.2" class="section-number selfRef">4.3.2. </a><a href="#name-retransmission-state-machin" class="section-name selfRef">Retransmission State Machine</a>
+          </h4>
+<p id="section-4.3.2-1">
+       FASOR consists of the three states discussed above while making
+       retranmission decisions, 
+   FAST, FAST_SLOW_FAST and SLOW_FAST. 
 
-<p> When RTT estimate is too small, unnecessary retransmission will occur also with CoCoA.  CoCoA being unable to take RTT samples at all is a particularly problematic phenomenon as it is similarly persisting state as with the algorithm outlined in RFC 7252 and the network remains in a congestion collapsed state due to persisting unnecessary retransmissions.  </p>
-<h1 id="rfc.section.4">
-<a href="#rfc.section.4">4.</a> FASOR Algorithm</h1>
-<p id="rfc.section.4.p.1">FASOR <a href="#JRCK18b" class="xref">[JRCK18b]</a> is composed of three key components: RTO computation, Slow RTO, and novel retransmission timeout back off logic.  </p>
-<h1 id="rfc.section.4.1">
-<a href="#rfc.section.4.1">4.1.</a> Computing Normal RTO (FastRTO)</h1>
-<p id="rfc.section.4.1.p.1">The FASOR algorithm measures the RTT for an CoAP message exchange over an end-to-end path and computes the RTO value using the TCP RTO algorithm specified in <a href="#RFC6298" class="xref">[RFC6298]</a>.  We call this normal RTO or FastRTO.  In contrast to the TCP RTO mechanism, FASOR SHOULD NOT use 1 second lower-bound when setting the RTO because RTO is only a backup mechanisms for loss detection with TCP, whereas with CoAP RTO is the primary and only loss detection mechanism. A lower-bound of 1 second would impact timeliness of the loss detection in low RTT environments. The RTO value MAY be upper-bounded by at least 60 seconds.  A CoAP sender using the FASOR algorithm SHOULD set initial RTO to 2 seconds. The computed RTO value as well as the initial RTO value is subject to dithering; they are dithered between RTO + 1/4 x SRTT and RTO + SRTT. For dithering initial RTO, SRTT is unset; therefore, SRTT is replaced with initial RTO / 3 which is derived from the RTO formula and equals to a hypothetical initial RTT that would yield the initial RTO using the SRTT and RTTVAR initialization rule of RFC 6298.  That is, for initial RTO of 2 seconds we use SRTT value of 2/3 seconds.  </p>
-<p id="rfc.section.4.1.p.2">FastRTO is updated only with unambiguous RTT samples.  Therefore, it closely tracks the actual RTT of the network and can quickly trigger a retransmission when the network state is not dubious.  Retransmitting without extra delay is very useful when the end-to-end path is subject to losses that are unrelated to congestion.  When the first unambiguous RTT sample is received, the RTT estimator is initialized with that sample as specified in <a href="#RFC6298" class="xref">[RFC6298]</a> except RTTVAR that is set to R/2K.  </p>
-<h1 id="rfc.section.4.2">
-<a href="#rfc.section.4.2">4.2.</a> <a href="#sec_slowrto" id="sec_slowrto">Slow RTO</a>
-</h1>
-<p id="rfc.section.4.2.p.1">We introduce Slow RTO as a safe way to ensure that only a unique copy of message is sent before at least one RTT has elapsed. To achieve this the sender must ensure that its retransmission timeout is set to a value that is larger than the path end-to-end RTT that may be inflated by the unnecessary retransmission themselves.  Therefore, whenever a message needs to be retransmitted, we measure Slow RTO as the elapsed time required for getting an acknowledgement.  That is, Slow RTO is measured starting from the original transmission of the request message until the receipt of the acknowledgement, regardless of the number of retransmissions.  In this way, Slow RTO always covers the worst-case RTT during which a number of unnecessary retransmissions were made but the acknowledgement is received for the original transmission.  In contrast to computing normal RTO, Slow RTO is not smoothed because it is derived from the sending pattern of the retransmissions (that may turn out unnecessary). In order to drain the potential unnecessary retransmissions successfully from the network, it makes sense to wait for the time used for sending them rather than some smoothed value.  However, Slow RTO is multiplied by a factor to allow some growth in load without making Slow RTO too aggressive (by default the factor of 1.5 is used).  FASOR then applies Slow RTO as one of the backed off timer values used with the next request message.  </p>
-<p id="rfc.section.4.2.p.2">Slow RTO allows rapidly converging towards stable operating point because 1) it lets the duplicate copies sent earlier to drain from the network reducing the perceived end-to-end RTT, and 2) allows enough time to acquire an unambiguous RTT sample for the RTO computation. Robustly acquiring the RTT sample ensures that the next RTO is set according to the recent measurement and further unnecessary retransmissions are avoided.  Slow RTO itself is a form of back off because it includes the accumulated time from the retransmission timeout back off of the previous exchange. FASOR uses this for its advantage as the time included into Slow RTO is what is needed to drain all unnecessary retransmissions possibly made during the previous exchange.  Assuming a stable RTT and that all of the retransmissions were unnecessary, the time to drain them is the time elapsed from the original transmission to the sending time of the last retransmission plus one RTT. When the acknowledgement for the original transmission arrives, one RTT has already elapsed, leaving only the sending time difference still unaccounted for which is at minimum the value for Slow RTO (when an RTT sample arrives immediately after the last retransmission). Even if RTT would be increasing, the draining still occurs rapidly due to exponentially backed off frequency in sending the unnecessary retransmissions.  </p>
-<h1 id="rfc.section.4.3">
-<a href="#rfc.section.4.3">4.3.</a> Retransmission Timeout Back Off Logic</h1>
-<h1 id="rfc.section.4.3.1">
-<a href="#rfc.section.4.3.1">4.3.1.</a> Overview</h1>
-<p id="rfc.section.4.3.1.p.1">FASOR uses normal RTO as the base for binary exponential back off when no retransmission were needed for the previous CoAP message exchange.  When retransmission were needed for the previous CoAP message exchange, the algorithm rules, however, are more complicated than with the traditional RTO back off because Slow RTO is injected into the back off series to reduce high impact of using Slow RTO. FASOR logic chooses from three possible back off series alternatives: </p>
-
-<ul class="empty">
-<li>FAST back off: Perform traditional RTO back off with the normal RTO as the base. Applied when the previous message was not retransmitted.</li>
-<li>FAST_SLOW_FAST back off: First perform a probe using the normal RTO for the original transmission of the request message to improve cases with losses unrelated to congestion.  If the probe for the original transmission of the request message is successful without retransmissions, continue with FAST back off for the next message exchange.  If the request message needs to be retransmitted, continue by using Slow RTO for the first retransmission in order to respond to congestion and drain the network from the unnecessary retransmissions that were potentially sent for the previous exchange. If still further RTOs are needed, continue by backing off the normal RTO further on each timeout. FAST_SLOW_FAST back off is applied just once when the previous request message using FAST back off required one or more retransmissions.</li>
-<li>SLOW_FAST back off: Perform Slow RTO first for the original transmisssion to respond to congestion and to acquire an unambiguous RTT sample with high probability. Then, if the original request needs to be retransmitted, continue with the normal RTO-based RTO back off serie by backing off the normal RTO on each timeout.  SLOW_FAST back off is applied when the previous request message using FAST_SLOW_FAST or SLOW_FAST back off required one or more retransmissions.  Once an acknowledgement for the original transmission with unambigous RTT sample is received, continue with FAST back off for the next message exchange.  </li>
-</ul>
-
-<p> For the initial message, FAST is used with INITIAL_RTO as the FastRTO value. From there on, state is updated when an acknowledgement arrives.  Following unambiguous RTT samples, FASOR always uses FAST. Whenever retransmissions are needed, the back off series selection is first downgraded to FAST_SLOW_FAST back off and then to SLOW_FAST back off if further retransmission are needed in FAST_SLOW_FAST.  </p>
-<p id="rfc.section.4.3.1.p.2">When Slow RTO is used as the first RTO value, the sender is likely to acquire unambiguous RTT sample even when the network has high delay due to congestion because Slow RTO is based on a very recent measurement of the worst-case RTT. However, using Slow RTO may negatively impact the performance when losses unrelated to congestion are occurring.  Due to its potential high cost, FASOR algorithm attempts to avoid using Slow RTO unnecessarily.  </p>
-<p id="rfc.section.4.3.1.p.3">The CoAP protocol is often used by devices that are connected through a wireless network where non-congestion related losses are much more frequent than in their wired counterparts. This has implications for the retransmission timeout algorithm. While it would be possible to implement FASOR such that it immediately uses Slow RTO when a dubious network state is detected, which would handle congestion very well, it would do significant harm for performance when RTOs occur due to non-congestion related losses.  Instead, FASOR uses first normal RTO for one transmission and only responds using Slow RTO if RTO expires also for that request message. Such a pattern quickly probes if the losses were unrelated to congestion and only slightly delays response if real congestion event is taking place. To ensure that an unambiguous RTT sample is also acquired on a congested network path, FASOR then needs to use Slow RTO for the original transmission of the subsequent packet if the probe was not successful.  </p>
-<h1 id="rfc.section.4.3.2">
-<a href="#rfc.section.4.3.2">4.3.2.</a> Retransmission State Machine</h1>
-<p id="rfc.section.4.3.2.p.1">FASOR consists of the three states discussed above while making retranmission decisions, FAST, FAST_SLOW_FAST and SLOW_FAST.  The state machine of the FASOR algorithm is depicted in <a href="#fig_statemachine" class="xref">Figure 1</a>.  </p>
-<div id="rfc.figure.1"></div>
-<div id="fig_statemachine"></div>
+         The state machine of the FASOR algorithm is depicted in
+         <a href="#fig_statemachine" class="xref">Figure 1</a>.<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
+<span id="name-state-machine-of-fasor"></span><div id="fig_statemachine">
+<figure id="figure-1">
+            <div class="artwork art-text alignLeft" id="section-4.3.2-2.1">
 <pre>
      +-------------------b----------------+
      |                                    |
@@ -563,123 +1336,288 @@
 |   ^ ^             |                         ^   |
 |   | |             |                         |   |
 +-b-+ +------b------+                         +-a-+
-   
-   a: retransmission acknowledged, ambiguous RTT sample acquired; 
-   b: no retransmission, umambiguous RTT sample acquired;  
+
+   a: retransmission acknowledged, ambiguous RTT sample acquired;
+   b: no retransmission, umambiguous RTT sample acquired;
 </pre>
-<p class="figure">Figure 1: State Machine of FASOR</p>
-<p id="rfc.section.4.3.2.p.2">In the FAST state, if the original transmission of the message has not been acknowledged by the receiver within the time defined by FastRTO, the sender will retransmit it. If there is still no acknowledgement of the retransmitted packet within 2*FastRTO, the sender performs the second retransmission and if necessary, each further retransmission applying binary exponential back off of FastRTO.  The retransmission interval in this state is defined as FastRTO, 2^1 * FastRTO, ..., 2^i * FastRTO.  </p>
-<p id="rfc.section.4.3.2.p.3">When there is an acknowledgement after any retransmission, the sender will calculate SlowRTO value based on the algorithm defined in <a href="#sec_slowrto" class="xref">Section 4.2</a>.  </p>
-<p id="rfc.section.4.3.2.p.4">When these is an acknowledgement after any retransmission, the sender will also switch to the second state, FAST_FLOW_FAST.  In this state, the retransmission interval is defined as FastRTO, Max(SlowRTO, 2*FastRTO), FastRTO * 2^1, ..., 2^i * FastRTO.  The state will be switched back to the FAST state once an acknowledgement is returned within FastRTO, i.e., no retransmission happens for a message. This is reasonable because it shows the network has recovered from congestion or bloated queue.  </p>
-<p id="rfc.section.4.3.2.p.5">If some retransmission has been made before the acknowledged arrives in the FAST_SLOW_FAST state, the sender updates the SlowRTO value, and moves to the third state, SLOW_FAST.  The retransmission interval in the SLOW_FAST state is defined as SlowRTO, FastRTO, FastRTO * 2^1, ..., 2^i * FastRTO.  </p>
-<p id="rfc.section.4.3.2.p.6">In SLOW_FAST state, the sender switches back to the FAST state if an unambiguous acknowledgement arrives. Otherwise, the sender stays in the SLOW_FAST state if retransmission happens again.  </p>
-<h1 id="rfc.section.4.4">
-<a href="#rfc.section.4.4">4.4.</a> Retransmission Count Option</h1>
-<p id="rfc.section.4.4.p.1">When retransmissions are needed to deliver a CoAP message, it is not possible to measure RTT for the RTO computation as the RTT sample becomes ambiguous. Therefore, it would be beneficial to be able to distinguish whether an acknowledgement arrives for the original transmission of the message or for a retransmission of it. This would allow reliably acquiring an RTT sample for every CoAP message exchange and thereby compute a more accurate RTO even during periods of congestion and loss.  </p>
-<p id="rfc.section.4.4.p.2">The Retransmission Count Option is used to distinguish whether an Acknowledgement message arrives for the original transmission or one of the retransmissions of a Confirmable message. However, the Retransmission Count Option cannot be used with an Empty Acknowledgement (or Reset) message because the CoAP protocol specification <a href="#RFC7252" class="xref">[RFC7252]</a> does not allow adding options to an Empty message. Therefore, Retransmission Count Option is useful only for the common case of Piggybacked Response. In case of Empty Acknowledgements the operation of FASOR is the same as without the option. This limitation may limit the usefulness of the Retransmission Count Option in deployment scenarios where the receiver is a proxy that will typically respond with an Empty message when it receives the request message.  </p>
-<div id="rfc.table.1"></div>
-<div id="table_rexmit_opt"></div>
-<table cellpadding="3" cellspacing="0" class="tt full center">
-<caption>Retransmission Count Option</caption>
-<thead><tr>
-<th class="center">No.</th>
-<th class="center">C</th>
-<th class="center">U</th>
-<th class="center">N</th>
-<th class="center">R</th>
-<th class="center">Name</th>
-<th class="center">Format</th>
-<th class="center">Length</th>
-<th class="center">Default</th>
-</tr></thead>
-<tbody><tr>
-<td class="center">TBD</td>
-<td class="center"></td>
-<td class="center"></td>
-<td class="center">X</td>
-<td class="center"></td>
-<td class="center">Rexmit-Cnt</td>
-<td class="center">uint</td>
-<td class="center">0-1</td>
-<td class="center">0</td>
-</tr></tbody>
-</table>
-<p>C=Critical, U=Unsafe, N=NoCacheKey, R=Repeatable</p>
-<p id="rfc.section.4.4.p.3">Implementation of the Retransmission Count option is optional and it is identified as elective. However, when it is present in a CoAP message and a CoAP endpoint processes it, it MUST be processed as described in this document. The Retransmission Count option MUST NOT occur more than once in a single message.  </p>
-<p id="rfc.section.4.4.p.4">The value of the Retransmission Count option is a variable-size (0 to 1 byte) unsigned integer. The default value for the option is the number 0 and it is represented with an empty option value (a zero-length sequence of bytes). However, when a client intents to use Retransmit Count option, it MUST reserve space for it by limiting the request message size also when the value is empty in order to fit the full-sized option into retransmissions.  </p>
-<p id="rfc.section.4.4.p.5">The Retransmission Count option can be present in both the request and response message. When the option is present in a request it indicates the ordinal number of the transmission for the request message.  </p>
-<p id="rfc.section.4.4.p.6">If the server supports (implements) the Retransmission Count option and the option is present in a request, the server MUST echo the option value in its Piggybacked Response unmodified. If the server replies with an Empty Acknowledgement the server MUST silently ignore the option and MUST NOT include it in a later separate response to that request.  </p>
-<p id="rfc.section.4.4.p.7">When Piggybacked Response carrying the Retransmission Count option arrives, the client uses the option to match the response message to the corresponding transmission of the request. In order to measure a correct RTT, the client must store the timestamp for the original transmission of the request as well as the timestamp for each retransmission, if any, of the request. The resulting RTT sample is used for the RTO computation.  If the client retransmitted the request without the option but the response includes the option, the client MUST silently ignore the option.  </p>
-<p id="rfc.section.4.4.p.8">The original transmission of a request is indicated with the number 0, except when sending the first request to a new destination endpoint (i.e., an endpoint not already in the memory). The first original transmission of the request to a new endpoint carries the number 255 (0xFF) and is interpreted the same as an original transmission carrying the number 0. Retransmissions, if any, carry the ordinal number of the retransmission. Once the first Piggybacked Response from the new endpoint arrives the client learns whether or not the other endpoint implements the option. If the first response includes the echoed option, the client learns that the other endpoint supports the option and may continue including the option to each retransmitted request. From this point on the original transmissions of requests implicitly include the option number 0 and a zero-byte integer will be sent according to the CoAP uint-encoding rules. If the first Piggybacked Response does not include the option, the client SHOULD stop including the option into the requests to that endpoint.  </p>
-<p id="rfc.section.4.4.p.9">When the Retransmission Count option is in use, the client bases the retransmission timeout for the normal RTO in the back off series as follows: </p>
-
-<ul class="empty"><li>max(RTO, Previous-RTT-Sample) </li></ul>
-
-<p> Previous-RTT-Sample is the RTT sample acquired from the previous message exchange. If no RTT sample was available with the previous message exchange (e.g., the server replied with an Empty Acknowledgement), RTO computed earlier is used like in case the Retransmission Count option is not in use.  </p>
-<h1 id="rfc.section.4.5">
-<a href="#rfc.section.4.5">4.5.</a> Alternatives for Exchanging Retransmission Count Information</h1>
-<p id="rfc.section.4.5.p.1">An alternative way of exchanging the retransmission count information between a client and server is to encode it in the Token. The Token is a client-local identifier and a client solely decides how it generates the Token. Therefore, including a varying Token value to retransmissions of the same request is all possible as long as the client can use the Token to differentiate between requests and match a response to the corresponding request. The server is required to make no assumptions about the content or structure of a Token and always echo the Token unmodified in its response.  </p>
-<p id="rfc.section.4.5.p.2">How exactly a client encodes the retransmission count into a Token is an implementation issue. Note that the original transmission of a request may carry a zero-length Token given that the rules for generating a Token as specified in RFC 7252 <a href="#RFC7252" class="xref">[RFC7252]</a> are followed. This allows reducing the overhead of including the Token into the reguests in such cases where Token could otherwise be omitted.  However, similar to Retransmit Count option the maximum request message size MUST be limited to accommodate the Token with retransmit count into the retransmissions of the request.  </p>
-<h1 id="rfc.section.5">
-<a href="#rfc.section.5">5.</a> Security Considerations</h1>
-<h1 id="rfc.section.6">
-<a href="#rfc.section.6">6.</a> IANA Considerations</h1>
-<p id="rfc.section.6.p.1">This memo includes no request to IANA.</p>
-<h1 id="rfc.references">
-<a href="#rfc.references">7.</a> References</h1>
-<h1 id="rfc.references.1">
-<a href="#rfc.references.1">7.1.</a> Normative References</h1>
-<table><tbody>
-<tr>
-<td class="reference"><b id="RFC2119">[RFC2119]</b></td>
-<td class="top">
-<a>Bradner, S.</a>, "<a href="https://tools.ietf.org/html/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a>", BCP 14, RFC 2119, DOI 10.17487/RFC2119, March 1997.</td>
-</tr>
-<tr>
-<td class="reference"><b id="RFC6298">[RFC6298]</b></td>
-<td class="top">
-<a>Paxson, V.</a>, <a>Allman, M.</a>, <a>Chu, J.</a> and <a>M. Sargent</a>, "<a href="https://tools.ietf.org/html/rfc6298">Computing TCP's Retransmission Timer</a>", RFC 6298, DOI 10.17487/RFC6298, June 2011.</td>
-</tr>
-<tr>
-<td class="reference"><b id="RFC7252">[RFC7252]</b></td>
-<td class="top">
-<a>Shelby, Z.</a>, <a>Hartke, K.</a> and <a>C. Bormann</a>, "<a href="https://tools.ietf.org/html/rfc7252">The Constrained Application Protocol (CoAP)</a>", RFC 7252, DOI 10.17487/RFC7252, June 2014.</td>
-</tr>
-</tbody></table>
-<h1 id="rfc.references.2">
-<a href="#rfc.references.2">7.2.</a> Informative References</h1>
-<table><tbody>
-<tr>
-<td class="reference"><b id="I-D.ietf-core-cocoa">[I-D.ietf-core-cocoa]</b></td>
-<td class="top">
-<a>Bormann, C.</a>, <a>Betzler, A.</a>, <a>Gomez, C.</a> and <a>I. Demirkol</a>, "<a href="https://tools.ietf.org/html/draft-ietf-core-cocoa-03">CoAP Simple Congestion Control/Advanced</a>", Internet-Draft draft-ietf-core-cocoa-03, February 2018.</td>
-</tr>
-<tr>
-<td class="reference"><b id="JRCK18a">[JRCK18a]</b></td>
-<td class="top">
-<a>Jarvinen, I.</a>, <a>Raitahila, I.</a>, <a>Cao, Z.</a> and <a>M. Kojo</a>, "<a>Is CoAP Congestion Safe?</a>",  Applied Networking Research Workshop (ANRW'18), July 2018.</td>
-</tr>
-<tr>
-<td class="reference"><b id="JRCK18b">[JRCK18b]</b></td>
-<td class="top">
-<a>Jarvinen, I.</a>, <a>Raitahila, I.</a>, <a>Cao, Z.</a> and <a>M. Kojo</a>, "<a>FASOR Retransmission Timeout and Congestion Control Mechanism for CoAP</a>",  Proceedings of IEEE Global Communications Conference (Globecom 2018), to appear, December 2018.</td>
-</tr>
-<tr>
-<td class="reference"><b id="KP87">[KP87]</b></td>
-<td class="top">
-<a>Karn, P.</a> and <a>C. Partridge</a>, "<a>Improving Round-trip Time Estimates in Reliable Transport Protocols</a>",  SIGCOMM'87 Proceedings of the ACM Workshop on                            Frontiers in Computer Communications Technology, August 1987.</td>
-</tr>
-<tr>
-<td class="reference"><b id="RFC0896">[RFC0896]</b></td>
-<td class="top">
-<a>Nagle, J.</a>, "<a href="https://tools.ietf.org/html/rfc896">Congestion Control in IP/TCP Internetworks</a>", RFC 896, DOI 10.17487/RFC0896, January 1984.</td>
-</tr>
-</tbody></table>
-<h1 id="rfc.appendix.A">
-<a href="#rfc.appendix.A">Appendix A.</a> <a href="#app-additional" id="app-additional">Pseudocode for Basic FASOR without Dithering</a>
-</h1>
-<div id="rfc.figure.2"></div>
-<div id="fig_pseudocode"></div>
+</div>
+<figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
+<a href="#name-state-machine-of-fasor" class="selfRef">State Machine of FASOR</a>
+            </figcaption></figure>
+</div>
+<p id="section-4.3.2-3">
+      In the FAST state, if the original transmission of the message has not
+      been acknowledged by the receiver
+   within the time defined by FastRTO, the sender will retransmit it. If there is
+   still no acknowledgement of the retransmitted packet within 2*FastRTO, the sender
+   performs the second retransmission and if necessary, each further
+   retransmission applying binary exponential back off of FastRTO. 
+   The retransmission interval in this state is 
+   defined as FastRTO, 2^1 * FastRTO, ..., 2^i * FastRTO.<a href="#section-4.3.2-3" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-4">
+        When there is an acknowledgement after any retransmission,
+        the sender will calculate SlowRTO value based on the algorithm
+        defined in <a href="#sec_slowrto" class="xref">Section 4.2</a>.<a href="#section-4.3.2-4" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-5">
+         When these is an acknowledgement after any retransmission,
+         the sender will also switch to
+   the second state, FAST_FLOW_FAST.  In this state, the retransmission interval is
+   defined as FastRTO, Max(SlowRTO, 2*FastRTO), FastRTO * 2^1, ..., 2^i * FastRTO. 
+   The state will be switched back to the FAST state once an acknowledgement
+   is returned within FastRTO, i.e., no retransmission happens for a message. This is
+   reasonable because it shows the network has recovered from congestion or bloated queue.<a href="#section-4.3.2-5" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-6">
+   If some retransmission has been made before the acknowledged arrives
+   in the FAST_SLOW_FAST
+   state, the sender
+   updates the SlowRTO value, and moves to the third state, SLOW_FAST.  The 
+   retransmission interval in the SLOW_FAST state is defined as 
+   SlowRTO, FastRTO, FastRTO * 2^1, ..., 2^i * FastRTO.<a href="#section-4.3.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-7">
+   In SLOW_FAST state, the sender switches back to the FAST state
+   if an unambiguous
+   acknowledgement arrives. Otherwise,
+   the sender stays in the SLOW_FAST state if retransmission happens again.<a href="#section-4.3.2-7" class="pilcrow">¶</a></p>
+</section>
+</section>
+<section id="section-4.4">
+        <h3 id="name-retransmission-count-option">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-retransmission-count-option" class="section-name selfRef">Retransmission Count Option</a>
+        </h3>
+<p id="section-4.4-1"> 
+        When retransmissions are needed to deliver a CoAP message, it is
+        not possible to measure RTT for the RTO computation as the RTT
+        sample becomes ambiguous. Therefore, it would be beneficial to
+        be able to distinguish whether an acknowledgement arrives for
+        the original transmission of the message or for a retransmission
+        of it. This would allow reliably acquiring an RTT sample for
+        every CoAP message exchange and thereby compute a more accurate RTO
+        even during periods of congestion and loss.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<p id="section-4.4-2"> 
+        The Retransmission Count Option is used to distinguish whether an
+        Acknowledgement message arrives for the original transmission or
+        one of the retransmissions of a Confirmable message. However,
+        the Retransmission Count Option cannot be used with an Empty
+        Acknowledgement (or Reset) message because the CoAP protocol
+        specification <span>[<a href="#RFC7252" class="xref">RFC7252</a>]</span> does not allow adding
+        options to an Empty message. Therefore, Retransmission Count Option
+        is useful only for the common case of Piggybacked Response. In
+        case of Empty Acknowledgements the operation of FASOR is the
+        same as without the option. This restriction with Empty
+        Acknowledgements may limit the usefulness
+        of the Retransmission Count Option in deployment scenarios where
+        the receiver is a proxy that will typically respond with an
+        Empty Acknowledgement when it receives a request message.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
+<span id="name-retransmission-count-option-2"></span><div id="table_rexmit_opt">
+<table class="center" id="table-1">
+          <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-retransmission-count-option-2" class="selfRef">Retransmission Count Option</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-center" rowspan="1" colspan="1">No.</th>
+              <th class="text-center" rowspan="1" colspan="1">C</th>
+              <th class="text-center" rowspan="1" colspan="1">U</th>
+              <th class="text-center" rowspan="1" colspan="1">N</th>
+              <th class="text-center" rowspan="1" colspan="1">R</th>
+              <th class="text-center" rowspan="1" colspan="1">Name</th>
+              <th class="text-center" rowspan="1" colspan="1">Format</th>
+              <th class="text-center" rowspan="1" colspan="1">Length</th>
+              <th class="text-center" rowspan="1" colspan="1">Default</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-center" rowspan="1" colspan="1">TBD</td>
+              <td class="text-center" rowspan="1" colspan="1"></td>
+              <td class="text-center" rowspan="1" colspan="1"></td>
+              <td class="text-center" rowspan="1" colspan="1">X</td>
+              <td class="text-center" rowspan="1" colspan="1"></td>
+              <td class="text-center" rowspan="1" colspan="1">Rexmit-Cnt</td>
+              <td class="text-center" rowspan="1" colspan="1">uint</td>
+              <td class="text-center" rowspan="1" colspan="1">0-1</td>
+              <td class="text-center" rowspan="1" colspan="1">0</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+<p id="section-4.4-4" class="keepWithPrevious">C=Critical, U=Unsafe, N=NoCacheKey, R=Repeatable<a href="#section-4.4-4" class="pilcrow">¶</a></p>
+<p id="section-4.4-5">
+        Implementation of the Retransmission Count option is optional and it is
+        identified as elective. However, when it is present in a CoAP
+        message and a CoAP endpoint processes it, it MUST be processed
+        as described in this document. The Retransmission Count option MUST NOT
+        occur more than once in a single message.<a href="#section-4.4-5" class="pilcrow">¶</a></p>
+<p id="section-4.4-6">
+         The value of the Retransmission Count option is a variable-size (0 to 1
+         byte) unsigned integer. The default value for the 
+         option is the number 0 and it is represented with an empty
+         option value (a zero-length sequence of bytes). However, when a
+         client intends to use Retransmit Count option, it MUST reserve
+         space for it by limiting the request message size also when
+         the value is empty in order to fit the full-sized option into
+         retransmissions.<a href="#section-4.4-6" class="pilcrow">¶</a></p>
+<p id="section-4.4-7">
+        The Retransmission Count option can be present in both the request and
+        response message. When the option is present in a
+        request it indicates the ordinal number of the transmission for
+        the request message.<a href="#section-4.4-7" class="pilcrow">¶</a></p>
+<p id="section-4.4-8"> 
+        If the server supports (implements) the Retransmission Count option and the option is
+        present in a request, the server MUST echo the option value in
+        its Piggybacked Response unmodified. If the server replies with
+        an Empty Acknowledgement the server MUST silently ignore the
+        option and MUST NOT include it in a later separate response to
+        that request.<a href="#section-4.4-8" class="pilcrow">¶</a></p>
+<p id="section-4.4-9">
+        When Piggybacked Response carrying the Retransmission Count option
+        arrives, the client uses the option to match the response
+        message to the corresponding transmission of the request. In
+        order to measure a correct RTT, the client must store the
+        timestamp for the original transmission of the request as well
+        as the timestamp for each retransmission, if any, of the
+        request. The resulting RTT sample is used for the RTO computation.
+        If the client retransmitted the request without the option but the
+        response includes the option, the client MUST silently ignore
+        the option.<a href="#section-4.4-9" class="pilcrow">¶</a></p>
+<p id="section-4.4-10">
+        The original transmission of a request is indicated with the
+        number 0, except when sending the first request to a new
+        destination endpoint (i.e., an endpoint not already in
+        the memory). The first original transmission of the
+        request to a new endpoint carries the number 255 (0xFF) and is
+        interpreted the same as an original transmission carrying the
+        number 0.
+        Once the first Piggybacked Response from the new
+        endpoint arrives the client learns whether or not the other
+        endpoint implements the option. If the first response includes
+        the echoed option, the client learns that the other endpoint
+        supports the option and may continue including the option to
+        each retransmitted request. From this point on the original
+        transmissions of requests implicitly include the option number 0
+        and a zero-byte integer will be sent according to the CoAP
+        uint-encoding rules. If the first Piggybacked Response does not include the
+        option, the client SHOULD stop including the option into the
+        requests to that endpoint.
+        Retransmissions, if any, carry the ordinal number of
+        the retransmission. That is, the client increments the
+        retransmission count by one for each retransmission of
+        the message.<a href="#section-4.4-10" class="pilcrow">¶</a></p>
+<p id="section-4.4-11">
+        When the Retransmission Count option is in use, the client bases the 
+        retransmission timeout for the normal RTO in the back off
+        series as follows:<a href="#section-4.4-11" class="pilcrow">¶</a></p>
+<ul class="ulEmpty normal">
+<li class="ulEmpty normal" id="section-4.4-12.1">
+          max(RTO, Previous-RTT-Sample)<a href="#section-4.4-12.1" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-4.4-13">
+        Previous-RTT-Sample is the RTT sample acquired from the
+        previous message exchange. If no RTT sample was available with
+        the previous message exchange (e.g., the server replied with
+        an Empty Acknowledgement), RTO computed earlier is used like in
+        case the Retransmission Count option is not in use.<a href="#section-4.4-13" class="pilcrow">¶</a></p>
+</section>
+<section id="section-4.5">
+        <h3 id="name-alternatives-for-exchanging">
+<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-alternatives-for-exchanging" class="section-name selfRef">Alternatives for Exchanging Retransmission Count Information</a>
+        </h3>
+<p id="section-4.5-1">        
+        An alternative way of exchanging the retransmission count
+        information between a client and server is to encode it in the
+        Token. The Token is a client-local identifier and a client
+        solely decides how it generates the Token. Therefore, including
+        a varying Token value to retransmissions of the same request
+        is all possible as long as the client can use the Token to
+        differentiate between requests and match a response to the
+        corresponding request. The server is required to make no
+        assumptions about the content or structure of a Token and
+        always echo the Token unmodified in its response.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.5-2">        
+        How exactly a client encodes the retransmission count into a
+        Token is an implementation issue. Note that the original
+        transmission of a request may carry a zero-length Token given
+        that the rules for generating a Token as specified in 
+        RFC 7252 <span>[<a href="#RFC7252" class="xref">RFC7252</a>]</span> are followed. This allows
+        reducing the overhead of including the Token into the
+        reguests in such cases where Token could otherwise be omitted.
+        However, similar to Retransmit Count option the maximum request
+        message size MUST be limited to accommodate the Token with
+        retransmit count into the retransmissions of the request.<a href="#section-4.5-2" class="pilcrow">¶</a></p>
+</section>
+</section>
+<section id="section-5">
+      <h2 id="name-security-considerations">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+    </h2>
+</section>
+<section id="section-6">
+      <h2 id="name-iana-considerations">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-6-1">This memo includes no request to IANA.<a href="#section-6-1" class="pilcrow">¶</a></p>
+</section>
+<section id="section-7">
+      <h2 id="name-references">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<section id="section-7.1">
+        <h3 id="name-normative-references">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2119">https://www.rfc-editor.org/info/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6298">[RFC6298]</dt>
+        <dd>
+<span class="refAuthor">Paxson, V.</span><span class="refAuthor">, Allman, M.</span><span class="refAuthor">, Chu, J.</span><span class="refAuthor">, and M. Sargent</span>, <span class="refTitle">"Computing TCP's Retransmission Timer"</span>, <span class="seriesInfo">RFC 6298</span>, <span class="seriesInfo">DOI 10.17487/RFC6298</span>, <time datetime="2011-06" class="refDate">June 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6298">https://www.rfc-editor.org/info/rfc6298</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7252">[RFC7252]</dt>
+      <dd>
+<span class="refAuthor">Shelby, Z.</span><span class="refAuthor">, Hartke, K.</span><span class="refAuthor">, and C. Bormann</span>, <span class="refTitle">"The Constrained Application Protocol (CoAP)"</span>, <span class="seriesInfo">RFC 7252</span>, <span class="seriesInfo">DOI 10.17487/RFC7252</span>, <time datetime="2014-06" class="refDate">June 2014</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc7252">https://www.rfc-editor.org/info/rfc7252</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+<section id="section-7.2">
+        <h3 id="name-informative-references">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC0896">[RFC0896]</dt>
+        <dd>
+<span class="refAuthor">Nagle, J.</span>, <span class="refTitle">"Congestion Control in IP/TCP Internetworks"</span>, <span class="seriesInfo">RFC 896</span>, <span class="seriesInfo">DOI 10.17487/RFC0896</span>, <time datetime="1984-01" class="refDate">January 1984</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc896">https://www.rfc-editor.org/info/rfc896</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-core-cocoa">[I-D.ietf-core-cocoa]</dt>
+        <dd>
+<span class="refAuthor">Bormann, C.</span><span class="refAuthor">, Betzler, A.</span><span class="refAuthor">, Gomez, C.</span><span class="refAuthor">, and I. Demirkol</span>, <span class="refTitle">"CoAP Simple Congestion Control/Advanced"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-core-cocoa-03</span>, <time datetime="2018-02-21" class="refDate">21 February 2018</time>, <span>&lt;<a href="http://www.ietf.org/internet-drafts/draft-ietf-core-cocoa-03.txt">http://www.ietf.org/internet-drafts/draft-ietf-core-cocoa-03.txt</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="KP87">[KP87]</dt>
+        <dd>
+<span class="refAuthor">Karn, P.</span><span class="refAuthor"> and C. Partridge</span>, <span class="refTitle">"Improving Round-trip Time Estimates in Reliable Transport Protocols"</span>, <span class="seriesInfo"> SIGCOMM'87 Proceedings of the ACM Workshop on                            Frontiers in Computer Communications Technology</span>, <time datetime="1987-08" class="refDate">August 1987</time>. </dd>
+<dd class="break"></dd>
+<dt id="JRCK18a">[JRCK18a]</dt>
+        <dd>
+<span class="refAuthor">Jarvinen, I.</span><span class="refAuthor">, Raitahila, I.</span><span class="refAuthor">, Cao, Z.</span><span class="refAuthor">, and M. Kojo</span>, <span class="refTitle">"Is CoAP Congestion Safe?"</span>, <span class="seriesInfo"> Applied Networking Research Workshop (ANRW'18)</span>, <time datetime="2018-07" class="refDate">July 2018</time>. </dd>
+<dd class="break"></dd>
+<dt id="JRCK18b">[JRCK18b]</dt>
+      <dd>
+<span class="refAuthor">Jarvinen, I.</span><span class="refAuthor">, Raitahila, I.</span><span class="refAuthor">, Cao, Z.</span><span class="refAuthor">, and M. Kojo</span>, <span class="refTitle">"FASOR Retransmission Timeout and Congestion Control Mechanism for CoAP"</span>, <span class="seriesInfo"> Proceedings of IEEE Global Communications Conference (Globecom 2018)</span>, <time datetime="2018-12" class="refDate">December 2018</time>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</section>
+<div id="app-additional">
+<section id="section-appendix.a">
+      <h2 id="name-pseudocode-for-basic-fasor-">
+<a href="#section-appendix.a" class="section-number selfRef">Appendix A. </a><a href="#name-pseudocode-for-basic-fasor-" class="section-name selfRef">Pseudocode for Basic FASOR without Dithering</a>
+      </h2>
+<div id="fig_pseudocode">
+<figure id="figure-2">
+        <div class="artwork art-text alignLeft" id="section-appendix.a-1.1">
 <pre>
 var state = NORMAL_RTO
 
@@ -781,96 +1719,70 @@ fastrto_series_backoff() {
   return backoff_series_timer
 }
 </pre>
-<p class="figure">Figure 2</p>
-<h1 id="rfc.authors"><a href="#rfc.authors">Authors' Addresses</a></h1>
-<div class="avoidbreak">
-  <address class="vcard">
-	<span class="vcardline">
-	  <span class="fn">Ilpo Jarvinen</span> 
-	  <span class="n hidden">
-		<span class="family-name">Jarvinen</span>
-	  </span>
-	</span>
-	<span class="org vcardline">University of Helsinki</span>
-	<span class="adr">
-	  <span class="vcardline">P.O. Box 68</span>
-
-	  <span class="vcardline">
-		<span class="locality">FI-00014 UNIVERSITY OF HELSINKI</span>,  
-		<span class="region"></span>
-		<span class="code"></span>
-	  </span>
-	  <span class="country-name vcardline">Finland</span>
-	</span>
-	<span class="vcardline">EMail: <a href="mailto:ilpo.jarvinen@cs.helsinki.fi">ilpo.jarvinen@cs.helsinki.fi</a></span>
-
-  </address>
-</div><div class="avoidbreak">
-  <address class="vcard">
-	<span class="vcardline">
-	  <span class="fn">Markku Kojo</span> 
-	  <span class="n hidden">
-		<span class="family-name">Kojo</span>
-	  </span>
-	</span>
-	<span class="org vcardline">University of Helsinki</span>
-	<span class="adr">
-	  <span class="vcardline">P.O. Box 68</span>
-
-	  <span class="vcardline">
-		<span class="locality">FI-00014 UNIVERSITY OF HELSINKI</span>,  
-		<span class="region"></span>
-		<span class="code"></span>
-	  </span>
-	  <span class="country-name vcardline">Finland</span>
-	</span>
-	<span class="vcardline">EMail: <a href="mailto:markku.kojo@cs.helsinki.fi">markku.kojo@cs.helsinki.fi</a></span>
-
-  </address>
-</div><div class="avoidbreak">
-  <address class="vcard">
-	<span class="vcardline">
-	  <span class="fn">Iivo Raitahila</span> 
-	  <span class="n hidden">
-		<span class="family-name">Raitahila</span>
-	  </span>
-	</span>
-	<span class="org vcardline">University of Helsinki</span>
-	<span class="adr">
-	  <span class="vcardline">P.O. Box 68</span>
-
-	  <span class="vcardline">
-		<span class="locality">FI-00014 UNIVERSITY OF HELSINKI</span>,  
-		<span class="region"></span>
-		<span class="code"></span>
-	  </span>
-	  <span class="country-name vcardline">Finland</span>
-	</span>
-	<span class="vcardline">EMail: <a href="mailto:iivo.raitahila@helsinki.fi">iivo.raitahila@helsinki.fi</a></span>
-
-  </address>
-</div><div class="avoidbreak">
-  <address class="vcard">
-	<span class="vcardline">
-	  <span class="fn">Zhen Cao</span> 
-	  <span class="n hidden">
-		<span class="family-name">Cao</span>
-	  </span>
-	</span>
-	<span class="org vcardline">Huawei</span>
-	<span class="adr">
-	  
-	  <span class="vcardline">
-		<span class="locality">Beijing</span>,  
-		<span class="region"></span>
-		<span class="code"></span>
-	  </span>
-	  <span class="country-name vcardline">China</span>
-	</span>
-	<span class="vcardline">EMail: <a href="mailto:zhencao.ietf@gmail.com">zhencao.ietf@gmail.com</a></span>
-
-  </address>
 </div>
-
+<figcaption><a href="#figure-2" class="selfRef">Figure 2</a></figcaption></figure>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="section-appendix.b">
+      <h2 id="name-authors-addresses">
+<a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Ilpo Jarvinen</span></div>
+<div dir="auto" class="left"><span class="org">University of Helsinki</span></div>
+<div dir="auto" class="left"><span class="street-address">P.O. Box 68</span></div>
+<div dir="auto" class="left">FI- <span class="locality">FI-00014 UNIVERSITY OF HELSINKI</span>
+</div>
+<div dir="auto" class="left"><span class="country-name">Finland</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:ilpo.jarvinen@cs.helsinki.fi" class="email">ilpo.jarvinen@cs.helsinki.fi</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Markku Kojo</span></div>
+<div dir="auto" class="left"><span class="org">University of Helsinki</span></div>
+<div dir="auto" class="left"><span class="street-address">P.O. Box 68</span></div>
+<div dir="auto" class="left">FI- <span class="locality">FI-00014 UNIVERSITY OF HELSINKI</span>
+</div>
+<div dir="auto" class="left"><span class="country-name">Finland</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:markku.kojo@cs.helsinki.fi" class="email">markku.kojo@cs.helsinki.fi</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Iivo Raitahila</span></div>
+<div dir="auto" class="left"><span class="org">University of Helsinki</span></div>
+<div dir="auto" class="left">FI- <span class="locality">Helsinki</span>
+</div>
+<div dir="auto" class="left"><span class="country-name">Finland</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:iivo.raitahila@alumni.helsinki.fi" class="email">iivo.raitahila@alumni.helsinki.fi</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Zhen Cao</span></div>
+<div dir="auto" class="left"><span class="org">Huawei</span></div>
+<div dir="auto" class="left"><span class="locality">Beijing</span></div>
+<div dir="auto" class="left"><span class="country-name">China</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:zhencao.ietf@gmail.com" class="email">zhencao.ietf@gmail.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
 </body>
 </html>

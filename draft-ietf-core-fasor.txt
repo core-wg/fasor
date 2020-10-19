@@ -5,10 +5,10 @@
 CoRE Working Group                                           I. Jarvinen
 Internet-Draft                                                   M. Kojo
 Intended status: Experimental                               I. Raitahila
-Expires: October 2, 2020                          University of Helsinki
+Expires: 22 April 2021                            University of Helsinki
                                                                   Z. Cao
                                                                   Huawei
-                                                          March 31, 2020
+                                                         19 October 2020
 
 
  Fast-Slow Retransmission Timeout and Congestion Control Algorithm for
@@ -45,7 +45,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on October 2, 2020.
+   This Internet-Draft will expire on 22 April 2021.
 
 
 
@@ -53,9 +53,9 @@ Status of This Memo
 
 
 
-Jarvinen, et al.         Expires October 2, 2020                [Page 1]
+Jarvinen, et al.          Expires 22 April 2021                 [Page 1]
 
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
 
 
 Copyright Notice
@@ -64,14 +64,13 @@ Copyright Notice
    document authors.  All rights reserved.
 
    This document is subject to BCP 78 and the IETF Trust's Legal
-   Provisions Relating to IETF Documents
-   (https://trustee.ietf.org/license-info) in effect on the date of
-   publication of this document.  Please review these documents
-   carefully, as they describe your rights and restrictions with respect
-   to this document.  Code Components extracted from this document must
-   include Simplified BSD License text as described in Section 4.e of
-   the Trust Legal Provisions and are provided without warranty as
-   described in the Simplified BSD License.
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Simplified BSD License text
+   as described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Simplified BSD License.
 
 Table of Contents
 
@@ -92,8 +91,8 @@ Table of Contents
    7.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
      7.1.  Normative References  . . . . . . . . . . . . . . . . . .  11
      7.2.  Informative References  . . . . . . . . . . . . . . . . .  12
-   Appendix A.  Pseudocode for Basic FASOR without Dithering . . . .  13
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  15
+   Appendix A.  Pseudocode for Basic FASOR without Dithering . . . .  12
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  14
 
 1.  Introduction
 
@@ -109,9 +108,10 @@ Table of Contents
 
 
 
-Jarvinen, et al.         Expires October 2, 2020                [Page 2]
+
+Jarvinen, et al.          Expires 22 April 2021                 [Page 2]
 
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
 
 
    This document specifies FASOR retransmission timeout and congestion
@@ -165,9 +165,9 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
 
 
 
-Jarvinen, et al.         Expires October 2, 2020                [Page 3]
+Jarvinen, et al.          Expires 22 April 2021                 [Page 3]
 
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
 
 
    than the default RTO (ACK_TIMEOUT).  If the CoAP sender performs
@@ -221,9 +221,9 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
 
 
 
-Jarvinen, et al.         Expires October 2, 2020                [Page 4]
+Jarvinen, et al.          Expires 22 April 2021                 [Page 4]
 
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
 
 
    would yield the initial RTO using the SRTT and RTTVAR initialization
@@ -277,9 +277,9 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
 
 
 
-Jarvinen, et al.         Expires October 2, 2020                [Page 5]
+Jarvinen, et al.          Expires 22 April 2021                 [Page 5]
 
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
 
 
    needed to drain all unnecessary retransmissions possibly made during
@@ -333,9 +333,9 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
 
 
 
-Jarvinen, et al.         Expires October 2, 2020                [Page 6]
+Jarvinen, et al.          Expires 22 April 2021                 [Page 6]
 
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
 
 
       on each timeout.  SLOW_FAST back off is applied when the previous
@@ -389,9 +389,9 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
 
 
 
-Jarvinen, et al.         Expires October 2, 2020                [Page 7]
+Jarvinen, et al.          Expires 22 April 2021                 [Page 7]
 
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
 
 
         +-------------------b----------------+
@@ -405,7 +405,7 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
       a: retransmission acknowledged, ambiguous RTT sample acquired;
       b: no retransmission, umambiguous RTT sample acquired;
 
-                     Figure 1: State Machine of FASOR
+                      Figure 1: State Machine of FASOR
 
    In the FAST state, if the original transmission of the message has
    not been acknowledged by the receiver within the time defined by
@@ -445,9 +445,9 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
 
 
 
-Jarvinen, et al.         Expires October 2, 2020                [Page 8]
+Jarvinen, et al.          Expires 22 April 2021                 [Page 8]
 
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
 
 
 4.4.  Retransmission Count Option
@@ -470,20 +470,20 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
    message.  Therefore, Retransmission Count Option is useful only for
    the common case of Piggybacked Response.  In case of Empty
    Acknowledgements the operation of FASOR is the same as without the
-   option.  This limitation may limit the usefulness of the
-   Retransmission Count Option in deployment scenarios where the
-   receiver is a proxy that will typically respond with an Empty message
-   when it receives the request message.
+   option.  This restriction with Empty Acknowledgements may limit the
+   usefulness of the Retransmission Count Option in deployment scenarios
+   where the receiver is a proxy that will typically respond with an
+   Empty Acknowledgement when it receives a request message.
 
-     +-----+---+---+---+---+------------+--------+--------+---------+
+     +=====+===+===+===+===+============+========+========+=========+
      | No. | C | U | N | R |    Name    | Format | Length | Default |
-     +-----+---+---+---+---+------------+--------+--------+---------+
+     +=====+===+===+===+===+============+========+========+=========+
      | TBD |   |   | X |   | Rexmit-Cnt |  uint  |  0-1   |    0    |
      +-----+---+---+---+---+------------+--------+--------+---------+
 
-             C=Critical, U=Unsafe, N=NoCacheKey, R=Repeatable
-
                    Table 1: Retransmission Count Option
+
+   C=Critical, U=Unsafe, N=NoCacheKey, R=Repeatable
 
    Implementation of the Retransmission Count option is optional and it
    is identified as elective.  However, when it is present in a CoAP
@@ -494,16 +494,16 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
    The value of the Retransmission Count option is a variable-size (0 to
    1 byte) unsigned integer.  The default value for the option is the
    number 0 and it is represented with an empty option value (a zero-
-   length sequence of bytes).  However, when a client intents to use
+   length sequence of bytes).  However, when a client intends to use
    Retransmit Count option, it MUST reserve space for it by limiting the
    request message size also when the value is empty in order to fit the
    full-sized option into retransmissions.
 
 
 
-Jarvinen, et al.         Expires October 2, 2020                [Page 9]
+Jarvinen, et al.          Expires 22 April 2021                 [Page 9]
 
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
 
 
    The Retransmission Count option can be present in both the request
@@ -533,8 +533,7 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
    endpoint (i.e., an endpoint not already in the memory).  The first
    original transmission of the request to a new endpoint carries the
    number 255 (0xFF) and is interpreted the same as an original
-   transmission carrying the number 0.  Retransmissions, if any, carry
-   the ordinal number of the retransmission.  Once the first Piggybacked
+   transmission carrying the number 0.  Once the first Piggybacked
    Response from the new endpoint arrives the client learns whether or
    not the other endpoint implements the option.  If the first response
    includes the echoed option, the client learns that the other endpoint
@@ -544,7 +543,9 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
    integer will be sent according to the CoAP uint-encoding rules.  If
    the first Piggybacked Response does not include the option, the
    client SHOULD stop including the option into the requests to that
-   endpoint.
+   endpoint.  Retransmissions, if any, carry the ordinal number of the
+   retransmission.  That is, the client increments the retransmission
+   count by one for each retransmission of the message.
 
    When the Retransmission Count option is in use, the client bases the
    retransmission timeout for the normal RTO in the back off series as
@@ -552,16 +553,17 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
 
       max(RTO, Previous-RTT-Sample)
 
+
+
+
+
+Jarvinen, et al.          Expires 22 April 2021                [Page 10]
+
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
+
+
    Previous-RTT-Sample is the RTT sample acquired from the previous
    message exchange.  If no RTT sample was available with the previous
-
-
-
-Jarvinen, et al.         Expires October 2, 2020               [Page 10]
-
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
-
-
    message exchange (e.g., the server replied with an Empty
    Acknowledgement), RTO computed earlier is used like in case the
    Retransmission Count option is not in use.
@@ -611,11 +613,9 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
 
 
 
-
-
-Jarvinen, et al.         Expires October 2, 2020               [Page 11]
+Jarvinen, et al.          Expires 22 April 2021                [Page 11]
 
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
 
 
    [RFC7252]  Shelby, Z., Hartke, K., and C. Bormann, "The Constrained
@@ -625,10 +625,21 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
 
 7.2.  Informative References
 
+   [RFC0896]  Nagle, J., "Congestion Control in IP/TCP Internetworks",
+              RFC 896, DOI 10.17487/RFC0896, January 1984,
+              <https://www.rfc-editor.org/info/rfc896>.
+
    [I-D.ietf-core-cocoa]
               Bormann, C., Betzler, A., Gomez, C., and I. Demirkol,
-              "CoAP Simple Congestion Control/Advanced", draft-ietf-
-              core-cocoa-03 (work in progress), February 2018.
+              "CoAP Simple Congestion Control/Advanced", Work in
+              Progress, Internet-Draft, draft-ietf-core-cocoa-03, 21
+              February 2018, <http://www.ietf.org/internet-drafts/draft-
+              ietf-core-cocoa-03.txt>.
+
+   [KP87]     Karn, P. and C. Partridge, "Improving Round-trip Time
+              Estimates in Reliable Transport Protocols",  SIGCOMM'87
+              Proceedings of the ACM Workshop on Frontiers in Computer
+              Communications Technology, August 1987.
 
    [JRCK18a]  Jarvinen, I., Raitahila, I., Cao, Z., and M. Kojo, "Is
               CoAP Congestion Safe?",  Applied Networking Research
@@ -637,42 +648,7 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
    [JRCK18b]  Jarvinen, I., Raitahila, I., Cao, Z., and M. Kojo, "FASOR
               Retransmission Timeout and Congestion Control Mechanism
               for CoAP",  Proceedings of IEEE Global Communications
-              Conference (Globecom 2018), to appear, December 2018.
-
-   [KP87]     Karn, P. and C. Partridge, "Improving Round-trip Time
-              Estimates in Reliable Transport Protocols",  SIGCOMM'87
-              Proceedings of the ACM Workshop on Frontiers in Computer
-              Communications Technology, August 1987.
-
-   [RFC0896]  Nagle, J., "Congestion Control in IP/TCP Internetworks",
-              RFC 896, DOI 10.17487/RFC0896, January 1984,
-              <https://www.rfc-editor.org/info/rfc896>.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Jarvinen, et al.         Expires October 2, 2020               [Page 12]
-
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
-
+              Conference (Globecom 2018), December 2018.
 
 Appendix A.  Pseudocode for Basic FASOR without Dithering
 
@@ -690,6 +666,14 @@ Appendix A.  Pseudocode for Basic FASOR without Dithering
     * Sending Original Copy and Retransmitting 'req'
     */
    send_request(req) {
+
+
+
+Jarvinen, et al.          Expires 22 April 2021                [Page 12]
+
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
+
+
      original_sendtime = time.now
      retransmit_count = 0
 
@@ -723,13 +707,6 @@ Appendix A.  Pseudocode for Basic FASOR without Dithering
      state = NORMAL_RTO
    }
 
-
-
-Jarvinen, et al.         Expires October 2, 2020               [Page 13]
-
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
-
-
    ambiguous_nextstate = {
      [NORMAL_RTO] = FAST_SLOW_FAST_RTO,
      [FAST_SLOW_FAST_RTO] = SLOW_FAST_RTO,
@@ -745,6 +722,14 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
     * RTO Calculations
     */
    calculate_rto() {
+
+
+
+Jarvinen, et al.          Expires 22 April 2021                [Page 13]
+
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
+
+
      return <state>_rtoseries()
    }
 
@@ -778,48 +763,47 @@ Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
      return backoff_series_timer
    }
 
-
-
-
-Jarvinen, et al.         Expires October 2, 2020               [Page 14]
-
-Internet-Draft       Fast-Slow RTO and CC Algorithm           March 2020
-
-
    fastrto_series_backoff() {
      backoff_series_timer *= 2
      return backoff_series_timer
    }
 
-                                 Figure 2
+                                  Figure 2
 
 Authors' Addresses
 
    Ilpo Jarvinen
    University of Helsinki
    P.O. Box 68
-   FI-00014 UNIVERSITY OF HELSINKI
+   FI- FI-00014 UNIVERSITY OF HELSINKI
    Finland
 
-   EMail: ilpo.jarvinen@cs.helsinki.fi
+
+
+
+Jarvinen, et al.          Expires 22 April 2021                [Page 14]
+
+Internet-Draft       Fast-Slow RTO and CC Algorithm         October 2020
+
+
+   Email: ilpo.jarvinen@cs.helsinki.fi
 
 
    Markku Kojo
    University of Helsinki
    P.O. Box 68
-   FI-00014 UNIVERSITY OF HELSINKI
+   FI- FI-00014 UNIVERSITY OF HELSINKI
    Finland
 
-   EMail: markku.kojo@cs.helsinki.fi
+   Email: markku.kojo@cs.helsinki.fi
 
 
    Iivo Raitahila
    University of Helsinki
-   P.O. Box 68
-   FI-00014 UNIVERSITY OF HELSINKI
+   FI- Helsinki
    Finland
 
-   EMail: iivo.raitahila@helsinki.fi
+   Email: iivo.raitahila@alumni.helsinki.fi
 
 
    Zhen Cao
@@ -827,7 +811,7 @@ Authors' Addresses
    Beijing
    China
 
-   EMail: zhencao.ietf@gmail.com
+   Email: zhencao.ietf@gmail.com
 
 
 
@@ -837,4 +821,20 @@ Authors' Addresses
 
 
 
-Jarvinen, et al.         Expires October 2, 2020               [Page 15]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Jarvinen, et al.          Expires 22 April 2021                [Page 15]
