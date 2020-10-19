@@ -549,7 +549,7 @@ on unambiguous round-trip time (RTT) samples.
          byte) unsigned integer. The default value for the 
          option is the number 0 and it is represented with an empty
          option value (a zero-length sequence of bytes). However, when a
-         client intents to use Retransmit Count option, it MUST reserve
+         client intends to use Retransmit Count option, it MUST reserve
          space for it by limiting the request message size also when
          the value is empty in order to fit the full-sized option into
          retransmissions.
