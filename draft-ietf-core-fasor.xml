@@ -143,7 +143,7 @@ on unambiguous round-trip time (RTT) samples.
         Making
         unnecessary retransmissions is also a pre-condition for the congestion
         collapse <xref target="RFC0896"/>, which may occur in the worst case 
-        if retransmissions are not well controlled <xref target="JRCK18a"/>.
+        if retransmissions are not well controlled.
         Therefore, the sender RTO algorithm should actively
         attempt to prevent unnecessary retransmissions from persisting under any
         circumstance.
@@ -157,7 +157,7 @@ on unambiguous round-trip time (RTT) samples.
         The recent CoAP congestion control algorithms, however,
         diverge from the principles of Karn's algorithm in significant
         ways and may pose a threat to the stability of the Internet
-        due to those differences.
+        due to those differences <xref target="JRCK18a"/>.
       </t>
 
       <t>
@@ -175,7 +175,7 @@ on unambiguous round-trip time (RTT) samples.
         CoAP sender performs exchanges over an end-to-end
         path with such a high RTT, it persistently keeps making unnecessary
         retransmissions for every exchange wasting some fraction of the
-        used resources (network capacity, battery power).
+        used resources (network capacity, battery power) <xref target="JRCK18a"/>.
       </t>
 
       <t>
