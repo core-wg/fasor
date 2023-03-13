@@ -85,7 +85,7 @@ link-errors are occuring, basing RTO calculation
 on unambiguous round-trip time (RTT) samples.
 </t>
 </abstract>
- 
+
    </front>
 
   <middle>
@@ -122,7 +122,7 @@ on unambiguous round-trip time (RTT) samples.
       "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
       document are to be interpreted as described in BCP 14, RFC 2119 <xref
       target="RFC2119"></xref>.</t>
-      
+
     </section>
 
     <!-- ********************************************* -->
@@ -135,14 +135,14 @@ on unambiguous round-trip time (RTT) samples.
         end-to-end RTT is larger than the RTO, it is
         impossible for the sender to avoid making unnecessary retransmissions
         that duplicate data still existing in the network because the sender
-        cannot receive any feedback in time. 
+        cannot receive any feedback in time.
         Unnecessary retransmissions
         cause two basic problems. First, they increase the perceived
         end-to-end RTT if the bottleneck has buffering capacity, and second,
         they prevent getting unambiguous RTT samples.
         Making
         unnecessary retransmissions is also a pre-condition for the congestion
-        collapse <xref target="RFC0896"/>, which may occur in the worst case 
+        collapse <xref target="RFC0896"/>, which may occur in the worst case
         if retransmissions are not well controlled.
         Therefore, the sender RTO algorithm should actively
         attempt to prevent unnecessary retransmissions from persisting under any
@@ -193,13 +193,13 @@ on unambiguous round-trip time (RTT) samples.
              is used.</t>
           <t>- When RTT suddenly jumps high enough to trigger the rule in
              CoCoA that prevents taking RTT samples when more than two
-             retransmissions are needed. 
+             retransmissions are needed.
              This may also occur when the packet drop rate on the path is high enough.</t>
         </list>
 
-<!-- 
+<!--
         Combination of these two cases occurs with 12 seconds or higher
-        RTT. 
+        RTT.
 -->
         CoCoA shares with default CoAP the same shortcoming of not applying
         the backed-off RTO from the previous message exchange. This combined
@@ -214,7 +214,7 @@ on unambiguous round-trip time (RTT) samples.
         to persisting unnecessary retransmissions.
 -->
       </t>
-    
+
     </section>
 
     <section title="FASOR Algorithm">
@@ -246,7 +246,7 @@ on unambiguous round-trip time (RTT) samples.
         from the RTO formula and equals to
         a hypothetical initial RTT sample that would yield the initial RTO
         of 2 seconds using the SRTT and RTTVAR initialization rule of RFC 6298.
-        That is, for the initial RTO of 2 seconds we use SRTT value of 2/3 seconds.  
+        That is, for the initial RTO of 2 seconds we use SRTT value of 2/3 seconds.
         </t>
 
         <t>
@@ -264,12 +264,12 @@ on unambiguous round-trip time (RTT) samples.
       </section>
       <section title="Slow RTO" anchor="sec_slowrto">
         <t>
-        We introduce Slow RTO as a 
+        We introduce Slow RTO as a
         safe way to ensure that only a single copy of message is sent
         before at least one RTT has elapsed. To achieve this the sender must ensure that
         its RTO is set to a value that is larger than
         the path end-to-end RTT that may be inflated by unnecessary
-        retransmissions themselves. 
+        retransmissions themselves.
 
         Therefore, whenever a message needs to be retransmitted, we
         measure Slow RTO as the elapsed time required for getting an acknowledgement.
@@ -278,21 +278,21 @@ on unambiguous round-trip time (RTT) samples.
         of the number of retransmissions.
         In this way, Slow RTO always covers the worst-case RTT during which a
         number of unnecessary retransmissions were made but the
-        acknowledgement is received for the original transmission. 
+        acknowledgement is received for the original transmission.
 
         In contrast to computing the FastRTO, Slow RTO is not smoothed because it is
         derived from the sending pattern of the retransmissions (that may
-        turn out unnecessary). In order to drain the potential unnecessary 
+        turn out unnecessary). In order to drain the potential unnecessary
         retransmissions successfully from the network, it makes sense to wait for the time used for sending
-        them rather than some smoothed value. 
+        them rather than some smoothed value.
         However, Slow RTO is multiplied by a factor to allow some growth in load
         without expiring Slow RTO too early (by default the factor of 1.5 is used).
-        
+
         Whenever a message is retransmitted, FASOR
         applies Slow RTO as one of the backed off timer values used
         with the next message (see <xref target="sec_backoff_logic"/>).
         </t>
-        
+
         <t>
         Slow RTO allows rapidly converging
         towards a stable operating point because 1) it lets the duplicate copies
@@ -312,7 +312,7 @@ on unambiguous round-trip time (RTT) samples.
         Assuming a stable RTT and that all of the retransmissions were
         unnecessary, the time to drain them is the time elapsed from the
         original transmission to the sending time of the last
-        retransmission plus one RTT. When the 
+        retransmission plus one RTT. When the
         acknowledgement for the original transmission arrives,
         one RTT has already elapsed, leaving only the sending time
         difference still unaccounted for which is at minimum the
@@ -329,8 +329,8 @@ on unambiguous round-trip time (RTT) samples.
       <section title="Retransmission Timeout Backoff Logic" anchor="sec_backoff_logic">
 
         <section title="Overview">
-       
-      
+
+
         <t>
         FASOR uses FastRTO as the base for binary exponential backoff
         when no retransmission were needed for
@@ -350,23 +350,23 @@ on unambiguous round-trip time (RTT) samples.
              If the original transmission of the message
              is successful without retransmissions, continue with the FAST
              backoff for the next message exchange.
-             If the message needs to be retransmitted, 
-             continue by using Slow RTO for the first retransmission in order to 
+             If the message needs to be retransmitted,
+             continue by using Slow RTO for the first retransmission in order to
              respond to congestion and drain the
              network from the unnecessary retransmissions that were
              potentially sent during the previous message exchange. If still
              further RTOs are needed, continue by backing off the
              FastRTO further on each timeout. FAST_SLOW_FAST backoff is applied just once
              when the previous message using FAST backoff required one or more retransmissions.</t>
-          <t>SLOW_FAST backoff: Perform Slow RTO first for the original 
+          <t>SLOW_FAST backoff: Perform Slow RTO first for the original
              transmission to respond to congestion and to acquire an
-             unambiguous RTT sample with high probability. Then, 
+             unambiguous RTT sample with high probability. Then,
              if the original message needs to be retransmitted,
              continue with the FastRTO-based RTO back off
-             serie by backing off the FastRTO on each timeout. 
+             serie by backing off the FastRTO on each timeout.
              The SLOW_FAST backoff is applied
-             when the previous message using the FAST_SLOW_FAST or 
-             SLOW_FAST 
+             when the previous message using the FAST_SLOW_FAST or
+             SLOW_FAST
              backoff required one or more retransmissions.
              Once an acknowledgement for the original transmission with
              an unambigous RTT sample is received, continue with the FAST
@@ -378,7 +378,7 @@ on unambiguous round-trip time (RTT) samples.
         acknowledgement arrives.
         Following unambiguous RTT samples, FASOR always
         uses FAST backoff. Whenever retransmissions are needed, the backoff
-        series selection is first downgraded to FAST_SLOW_FAST backoff 
+        series selection is first downgraded to FAST_SLOW_FAST backoff
         and then to SLOW_FAST backoff if further retransmissions are needed
         in FAST_SLOW_FAST backoff.
         </t>
@@ -417,16 +417,16 @@ on unambiguous round-trip time (RTT) samples.
         FASOR then needs to use Slow RTO for the original transmission of
         the subsequent message if the probe was not successful.
         </t>
-        
-        
+
+
         </section>
-        
+
       <section title="Retransmission State Machine">
-      
+
       <t>
        FASOR consists of the three states discussed above while making
-       retranmission decisions on the backoff logic and RTO to use: 
-   FAST, FAST_SLOW_FAST, and SLOW_FAST. 
+       retranmission decisions on the backoff logic and RTO to use:
+   FAST, FAST_SLOW_FAST, and SLOW_FAST.
 
          The state machine of the FASOR algorithm is depicted in
          <xref target="fig_statemachine"/>.
@@ -442,13 +442,13 @@ on unambiguous round-trip time (RTT) samples.
 |   ^ ^             |                         ^   |
 |   | |             |                         |   |
 +-b-+ +------b------+                         +-a-+
-   
-   a: retransmission acknowledged, ambiguous RTT sample acquired; 
-   b: no retransmission, umambiguous RTT sample acquired;  
+
+   a: retransmission acknowledged, ambiguous RTT sample acquired;
+   b: no retransmission, umambiguous RTT sample acquired;
 ]]></artwork>
 
           </figure>
-      
+
       <t>
       The FAST state is the initial state and it is applied always when the
       previous message was not retransmitted.
@@ -457,15 +457,15 @@ on unambiguous round-trip time (RTT) samples.
    within the time defined by FastRTO, the sender will retransmit it. If there is
    still no acknowledgement of the retransmitted packet within 2*FastRTO, the sender
    performs a second retransmission and, if necessary, each further
-   retransmission also applies the binary exponential backoff of the FastRTO. 
-   The retransmission interval in this state is 
-   defined as FastRTO, 2^1 * FastRTO, ..., 2^i * FastRTO. 
+   retransmission also applies the binary exponential backoff of the FastRTO.
+   The retransmission interval in this state is
+   defined as FastRTO, 2^1 * FastRTO, ..., 2^i * FastRTO.
       </t>
-      
+
       <t>
         When an acknowledgement arrives after any retransmission in any of the states,
         the sender will calculate SlowRTO value based on the algorithm
-        defined in <xref target="sec_slowrto"/>. 
+        defined in <xref target="sec_slowrto"/>.
       </t>
 
       <t>
@@ -473,21 +473,21 @@ on unambiguous round-trip time (RTT) samples.
          if an acknowledgement arrives after any retransmission,
          the sender will switch to
    the second state, FAST_FLOW_FAST.  In this state, the retransmission interval is
-   defined as FastRTO, Max(SlowRTO, 2*FastRTO), FastRTO * 2^1, ..., 2^i * FastRTO. 
+   defined as FastRTO, Max(SlowRTO, 2*FastRTO), FastRTO * 2^1, ..., 2^i * FastRTO.
    The state will be switched back to the FAST state once an acknowledgement
    is returned within FastRTO, i.e., no retransmissions for a message. This is
-   reasonable because it shows the network has recovered from congestion or a bloated queue. 
+   reasonable because it shows the network has recovered from congestion or a bloated queue.
    </t>
-   
+
    <t>
    If at least one retransmission has been made before the acknowledged arrives
    in the FAST_SLOW_FAST
    state, the sender
-   updates the SlowRTO value, and moves to the third state, SLOW_FAST.  The 
-   retransmission interval in the SLOW_FAST state is defined as 
-   SlowRTO, FastRTO, FastRTO * 2^1, ..., 2^i * FastRTO. 
+   updates the SlowRTO value, and moves to the third state, SLOW_FAST.  The
+   retransmission interval in the SLOW_FAST state is defined as
+   SlowRTO, FastRTO, FastRTO * 2^1, ..., 2^i * FastRTO.
    </t>
-   
+
    <t>
    In the SLOW_FAST state, the sender switches back to the FAST state
    if an unambiguous
@@ -497,12 +497,12 @@ on unambiguous round-trip time (RTT) samples.
       </t>
 
       </section>
-      
+
       </section>
 
       <section title="Retransmission Count Option">
 
-        <t> 
+        <t>
         When retransmissions are needed to deliver a CoAP message, it is
         not possible to measure RTT for the RTO computation as the RTT
         sample becomes ambiguous. Therefore, it would be beneficial to
@@ -513,7 +513,7 @@ on unambiguous round-trip time (RTT) samples.
         even during periods of congestion and loss.
         </t>
 
-        <t> 
+        <t>
         The Retransmission Count Option is used to distinguish whether an
         Acknowledgement message arrives for the original transmission or
         one of the retransmissions of a Confirmable message. However,
@@ -557,12 +557,12 @@ on unambiguous round-trip time (RTT) samples.
         identified as elective. However, when it is present in a CoAP
         message and a CoAP endpoint processes it, it MUST be processed
         as described in this document. The Retransmission Count option MUST NOT
-        occur more than once in a single message. 
+        occur more than once in a single message.
         </t>
 
         <t>
          The value of the Retransmission Count option is a variable-size (0 to 1
-         byte) unsigned integer. The default value for the 
+         byte) unsigned integer. The default value for the
          option is the number 0 and it is represented with an empty
          option value (a zero-length sequence of bytes). However, when a
          client intends to use Retransmit Count option, it MUST reserve
@@ -578,7 +578,7 @@ on unambiguous round-trip time (RTT) samples.
         the request message.
         </t>
 
-        <t> 
+        <t>
         If the server supports (implements) the Retransmission Count option and the option is
         present in a request, the server MUST echo the option value in
         its Piggybacked Response unmodified. If the server replies with
@@ -631,7 +631,7 @@ on unambiguous round-trip time (RTT) samples.
         </t>
 -->
         <t>
-        When the Retransmission Count option is in use, the client bases the 
+        When the Retransmission Count option is in use, the client bases the
         RTO for the FastRTO in the back off
         series as follows:
          <list>
@@ -645,7 +645,7 @@ on unambiguous round-trip time (RTT) samples.
         an Empty Acknowledgement), RTO computed earlier is used like in
         case the Retransmission Count option is not in use.
         </t>
-<!-- 
+<!--
         <list style="hanging" hangIndent="6">
            <t hangText="Retransmission Count:">
            Text
@@ -656,7 +656,7 @@ on unambiguous round-trip time (RTT) samples.
       </section>
 
       <section title="Alternatives for Exchanging Retransmission Count Information">
-        <t>        
+        <t>
         An alternative way of exchanging the retransmission count
         information between a client and server is to encode it in the
         Token. The Token is a client-local identifier and a client
@@ -667,20 +667,20 @@ on unambiguous round-trip time (RTT) samples.
         corresponding request. The server is required to make no
         assumptions about the content or structure of a Token and
         always echo the Token unmodified in its response.
-        </t>        
-        <t>        
+        </t>
+        <t>
         How exactly a client encodes the retransmission count into a
         Token is an implementation issue. Note that the original
         transmission of a request may carry a zero-length Token given
-        that the rules for generating a Token as specified in 
+        that the rules for generating a Token as specified in
         RFC 7252 <xref target="RFC7252"/> are followed. This allows
         reducing the overhead of including the Token into the
         reguests in such cases where Token could otherwise be omitted.
         However, similar to Retransmit Count option the maximum request
         message size MUST be limited to accommodate the Token with
         retransmit count into the retransmissions of the request.
-        </t>        
-      </section> 
+        </t>
+      </section>
 
     </section>
 
