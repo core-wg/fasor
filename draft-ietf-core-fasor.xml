@@ -106,9 +106,9 @@ on unambiguous round-trip time (RTT) samples.
       <t>
         This document specifies FASOR retransmission timeout and congestion
         control algorithm <xref target="JRCK18b"/>. FASOR algorithm ensures
-        unnecessary
-        retransmissions that a sender may have sent due to an inaccurate RTT
-        estimate will not persist avoiding the threat of congestion
+        that unnecessary
+        retransmissions due to an inaccurate RTT
+        estimate will not persist, avoiding the threat of congestion
         collapse. FASOR also aims to quickly restore the accuracy of the
         RTT estimate. Armed with an accurate RTT estimate, FASOR not only
         handles congestion robustly but also can quickly infer losses due
@@ -167,11 +167,15 @@ on unambiguous round-trip time (RTT) samples.
         both from unambiguous and ambiguous RTT samples and applies a
         modified version of the TCP RTO algorithm <xref target="RFC6298"/>.
 
-        The algorithm in RFC 7252 lacks solution to
-        persistent congestion.
-        The binary exponential backoff used for the RTO
+        The algorithm for default CoAP in RFC 7252 lacks solution to
+        persistent congestion;
+        the binary exponential backoff used for the RTO
         does not properly address unnecessary retransmissions
-        when RTT is larger than the default RTO (ACK_TIMEOUT). If the
+        when RTT is larger than the default RTO (ACK_TIMEOUT),
+        because default CoAP does not apply a larger, backed-off RTO timer value from
+        the previous message exchange to the backoff series of the subsequent
+        message exchange as required by the Karn's algorithm <xref target="KP87"/>.
+        If a default
         CoAP sender performs exchanges over an end-to-end
         path with such a high RTT, it persistently keeps making unnecessary
         retransmissions for every exchange wasting some fraction of the
@@ -192,17 +196,23 @@ on unambiguous round-trip time (RTT) samples.
              retransmissions are needed. 
              This may also occur when the packet drop rate on the path is high enough.</t>
         </list>
-	When RTT estimate is too small, unnecessary retransmission will
-	occur also with CoCoA.
+
 <!-- 
         Combination of these two cases occurs with 12 seconds or higher
         RTT. 
 -->
+        CoCoA shares with default CoAP the same shortcoming of not applying
+        the backed-off RTO from the previous message exchange. This combined
+        with either of the exceptions discussed above results in persistent
+        unnecessary retransmissions also with CoCoA, when the RTT is high
+        enough.
+<!--
         CoCoA being unable to take RTT samples at all is a particularly
         problematic phenomenon as it is similarly
         persisting state as with the algorithm outlined in RFC 7252
         and the network remains in a congestion collapsed state due
         to persisting unnecessary retransmissions.
+-->
       </t>
     
     </section>
@@ -278,9 +288,9 @@ on unambiguous round-trip time (RTT) samples.
         However, Slow RTO is multiplied by a factor to allow some growth in load
         without expiring Slow RTO too early (by default the factor of 1.5 is used).
         
-        FASOR
-        then applies Slow RTO as one of the backed off timer values used
-        with the next message.
+        Whenever a message is retransmitted, FASOR
+        applies Slow RTO as one of the backed off timer values used
+        with the next message (see <xref target="sec_backoff_logic"/>).
         </t>
         
         <t>
@@ -316,8 +326,8 @@ on unambiguous round-trip time (RTT) samples.
 
       </section>
 
-      <section title="Retransmission Timeout Backoff Logic">
-      
+      <section title="Retransmission Timeout Backoff Logic" anchor="sec_backoff_logic">
+
         <section title="Overview">
        
       
@@ -440,6 +450,8 @@ on unambiguous round-trip time (RTT) samples.
           </figure>
       
       <t>
+      The FAST state is the initial state and it is applied always when the
+      previous message was not retransmitted.
       In the FAST state, if the original transmission of the message has not
       been acknowledged by the receiver
    within the time defined by FastRTO, the sender will retransmit it. If there is
@@ -479,8 +491,9 @@ on unambiguous round-trip time (RTT) samples.
    <t>
    In the SLOW_FAST state, the sender switches back to the FAST state
    if an unambiguous
-   acknowledgement arrives. Otherwise,
-   the sender stays in the SLOW_FAST state if retransmission happens again.  
+   acknowledgement arrives. Otherwise, if any number of retransmissions is
+   needed again,
+   the sender stays in the SLOW_FAST state.
       </t>
 
       </section>
