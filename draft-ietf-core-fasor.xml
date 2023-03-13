@@ -246,10 +246,9 @@ on unambiguous round-trip time (RTT) samples.
         Retransmitting without extra delay is very useful when the
         end-to-end path is subject to losses that are unrelated to
         congestion.
-
         When the first unambiguous RTT sample (R) is received, the RTT estimator
-        is initialized with that sample as specified in
-        <xref target="RFC6298"/> except RTTVAR that is set to R/2K .
+        is initialized with that sample as specified in RFC 6298,
+        except RTTVAR that is set to R/2K where K = 4 <xref target="RFC6298"/>.
         </t>
 
       </section>
