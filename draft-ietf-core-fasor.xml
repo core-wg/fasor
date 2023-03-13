@@ -222,8 +222,9 @@ on unambiguous round-trip time (RTT) samples.
         We call this normal RTO as FastRTO.
         In contrast to the TCP RTO mechanism, FASOR SHOULD NOT use
         1 second lower-bound when setting the RTO because RTO is
-        only a backup mechanisms for loss detection with TCP, whereas with CoAP
-        RTO is the primary and only loss detection mechanism. A lower-bound of
+        the primary and only loss detection mechanism with CoAP,
+        whereas RTO is only a backup mechanism for loss detection with TCP.
+        A lower-bound of
         1 second would impact timeliness of the loss detection in
         low RTT environments. The RTO value MAY be upper-bounded by at least 60 seconds.
 
