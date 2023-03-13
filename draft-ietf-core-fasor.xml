@@ -530,27 +530,39 @@ on unambiguous round-trip time (RTT) samples.
         Empty Acknowledgement when it receives a request message.
         </t>
 
-        <texttable anchor="table_rexmit_opt" title="Retransmission Count Option">
-          <ttcol align='center'>No.</ttcol>
-          <ttcol align='center'>C</ttcol>
-          <ttcol align='center'>U</ttcol>
-          <ttcol align='center'>N</ttcol>
-          <ttcol align='center'>R</ttcol>
-          <ttcol align='center'>Name</ttcol>
-          <ttcol align='center'>Format</ttcol>
-          <ttcol align='center'>Length</ttcol>
-          <ttcol align='center'>Default</ttcol>
-          <c>TBD</c>
-          <c></c>
-          <c></c>
-          <c>X</c>
-          <c></c>
-          <c>Rexmit-Cnt</c>
-          <c>uint</c>
-          <c>0-1</c>
-          <c>0</c>
-          <postamble>C=Critical, U=Unsafe, N=NoCacheKey, R=Repeatable</postamble>
-        </texttable>
+        <table anchor="table_rexmit_opt" title="Retransmission Count Option">
+          <thead>
+            <tr>
+              <th align='center'>No.</th>
+              <th align='center'>C</th>
+              <th align='center'>U</th>
+              <th align='center'>N</th>
+              <th align='center'>R</th>
+              <th align='center'>Name</th>
+              <th align='center'>Format</th>
+              <th align='center'>Length</th>
+              <th align='center'>Default</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>TBD</td>
+              <td></td>
+              <td></td>
+              <td>X</td>
+              <td></td>
+              <td>Rexmit-Cnt</td>
+              <td>uint</td>
+              <td>0-1</td>
+              <td>0</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="9">C=Critical, U=Unsafe, N=NoCacheKey, R=Repeatable</td>
+            </tr>
+          </tfoot>
+        </table>
 
         <t>
         Implementation of the Retransmission Count option is optional and it is
