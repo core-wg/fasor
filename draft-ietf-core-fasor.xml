@@ -63,24 +63,24 @@
     </author>
 
     <!-- month and day will be generated automatically by XML2RFC; be sure the year is current.-->
-    <date  year="2020" />
+    <date  year="2023" />
 
     <area>Applications and Real-Time Area</area>
     <workgroup>CoRE Working Group</workgroup>
     <keyword>Network Management</keyword>
 
 <abstract>
-<t>This document specifies an alternative retransmission timeout and
+<t>This document specifies an alternative retransmission timeout (RTO) and
 congestion control back off algorithm for
 the CoAP protocol, called Fast-Slow RTO (FASOR).</t>
 
 <t>The algorithm specified in this document employs
-an appropriate and large enough back off of Retransmission Timeout (RTO)
+an appropriate and large enough back off of RTO
 as the major congestion control mechanism to allow acquiring unambiguous
 RTT samples with high probability
 and to prevent building a persistent queue when retransmitting.
 The algorithm also aims to retransmit quickly
-using an accurately managed retransmission timeout when
+using an accurately managed RTO when
 link-errors are occuring, basing RTO calculation
 on unambiguous round-trip time (RTT) samples.
 </t>
@@ -93,7 +93,7 @@ on unambiguous round-trip time (RTT) samples.
       <t>
         CoAP senders use retransmission timeout (RTO) to infer losses that have
         occurred in the network. For such a heuristic to be correct, the RTT
-        estimate used for calculating the retransmission timeout must match
+        estimate used for calculating the RTO must match
         to the real end-to-end path characteristics. Otherwise, unnecessary
         retransmission may occur. Both default RTO mechanism for CoAP
         <xref target="RFC7252"/> and CoCoA <xref target="I-D.ietf-core-cocoa"/>
@@ -128,10 +128,10 @@ on unambiguous round-trip time (RTT) samples.
 
     <section title="Problems with Existing CoAP Congestion Control Algorithms">
       <t>
-        Correctly inferring losses requires the retransmission timeout (RTO)
+        Correctly inferring losses requires the RTO
         to be longer than the real RTT in the network. Under certain
         circumstances the RTO may be incorrectly small. If the real
-        end-to-end RTT is larger than the retransmission timeout, it is
+        end-to-end RTT is larger than the RTO, it is
         impossible for the sender to avoid making unnecessary retransmissions
         that duplicate data still existing in the network because the sender
         cannot receive any feedback in time. 
@@ -143,7 +143,7 @@ on unambiguous round-trip time (RTT) samples.
         unnecessary retransmissions is also a pre-condition for the congestion
         collapse <xref target="RFC0896"/>, which may occur in the worst case 
         if retransmissions are not well controlled <xref target="JRCK18a"/>.
-        Therefore, the sender retransmission timeout algorithm should actively
+        Therefore, the sender RTO algorithm should actively
         attempt to prevent unnecessary retransmissions from persisting under any
         circumstance.
       </t>
@@ -151,7 +151,7 @@ on unambiguous round-trip time (RTT) samples.
       <t>
         Karn's algorithm <xref target="KP87"/> has prevented unnecessary
         retransmission from turning into congestion collapse for
-        decades due to robust RTT estimation and retransmission timeout
+        decades due to robust RTT estimation and RTO
         backoff handling.
         The recent CoAP congestion control algorithms, however,
         diverge from the principles of Karn's algorithm in significant
@@ -168,7 +168,7 @@ on unambiguous round-trip time (RTT) samples.
 
         The algorithm in RFC 7252 lacks solution to
         persistent congestion.
-        The binary exponential back off used for the retransmission timeout
+        The binary exponential back off used for the RTO
         does not properly address unnecessary retransmissions
         when RTT is larger than the default RTO (ACK_TIMEOUT). If the
         CoAP sender performs exchanges over an end-to-end
@@ -210,7 +210,7 @@ on unambiguous round-trip time (RTT) samples.
         <t>
         FASOR <xref target="JRCK18b"/> is composed of three key
         components: RTO computation,
-        Slow RTO, and novel retransmission timeout back off logic.
+        Slow RTO, and a novel RTO back off logic.
         </t>
       <section title="Computing Normal RTO (FastRTO)">
 
@@ -256,7 +256,7 @@ on unambiguous round-trip time (RTT) samples.
         We introduce Slow RTO as a 
         safe way to ensure that only a unique copy of message is sent
         before at least one RTT has elapsed. To achieve this the sender must ensure that
-        its retransmission timeout is set to a value that is larger than
+        its RTO is set to a value that is larger than
         the path end-to-end RTT that may be inflated by the unnecessary
         retransmission themselves. 
 
@@ -294,7 +294,7 @@ on unambiguous round-trip time (RTT) samples.
 
         Slow RTO
         itself is a form of back off because it includes the
-        accumulated time from the retransmission timeout back off of the previous
+        accumulated time from the RTO backoff of the previous
         exchange. FASOR uses this for its advantage as the time included
         into Slow RTO is what is needed to drain all unnecessary
         retransmissions possibly made during the previous exchange.
@@ -388,7 +388,7 @@ on unambiguous round-trip time (RTT) samples.
         The CoAP protocol is often used by devices that are connected
         through a wireless network where non-congestion related losses
         are much more frequent than in their wired counterparts. This has
-        implications for the retransmission timeout algorithm. While it
+        implications for the RTO algorithm. While it
         would be possible to implement FASOR such that it immediately
         uses Slow RTO when a dubious network state is detected, which
         would handle congestion very well, it would
@@ -616,7 +616,7 @@ on unambiguous round-trip time (RTT) samples.
 -->
         <t>
         When the Retransmission Count option is in use, the client bases the 
-        retransmission timeout for the normal RTO in the back off
+        RTO for the normal RTO in the back off
         series as follows:
          <list>
           <t>
