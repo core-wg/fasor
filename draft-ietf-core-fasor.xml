@@ -96,7 +96,8 @@ on unambiguous round-trip time (RTT) samples.
         estimate used for calculating the RTO must match
         to the real end-to-end path characteristics. Otherwise, unnecessary
         retransmission may occur. Both default RTO mechanism for CoAP
-        <xref target="RFC7252"/> and CoCoA <xref target="I-D.ietf-core-cocoa"/>
+        <xref target="RFC7252"/> and the latest version of CoCoA
+        <xref target="I-D.ietf-core-cocoa"/>
         have issues in dealing with unnecessary retransmissions and in the
         worst-case the situation can persist causing congestion collapse
         <xref target="JRCK18a"/>.
@@ -168,7 +169,7 @@ on unambiguous round-trip time (RTT) samples.
 
         The algorithm in RFC 7252 lacks solution to
         persistent congestion.
-        The binary exponential back off used for the RTO
+        The binary exponential backoff used for the RTO
         does not properly address unnecessary retransmissions
         when RTT is larger than the default RTO (ACK_TIMEOUT). If the
         CoAP sender performs exchanges over an end-to-end
@@ -183,7 +184,7 @@ on unambiguous round-trip time (RTT) samples.
         congestion
         by basing its RTO value on an estimated
         RTT. However, there are couple
-        of exceptions when the RTT estimation is not available:<list>
+        of exceptions when the RTT estimate is not available or it cannot be updated:<list>
           <t>- At the beginning of a flow where initial RTO of 2 seconds
              is used.</t>
           <t>- When RTT suddenly jumps high enough to trigger the rule in
@@ -215,7 +216,7 @@ on unambiguous round-trip time (RTT) samples.
       <section title="Computing Normal RTO (FastRTO)">
 
         <t>
-        The FASOR algorithm measures the RTT for an CoAP message exchange over an end-to-end path
+        The FASOR algorithm measures the RTT for a CoAP message exchange over an end-to-end path
         and computes the RTO value using
         the TCP RTO algorithm specified in <xref target="RFC6298"/>.
         We call this normal RTO as FastRTO.
@@ -226,15 +227,15 @@ on unambiguous round-trip time (RTT) samples.
         1 second would impact timeliness of the loss detection in
         low RTT environments. The RTO value MAY be upper-bounded by at least 60 seconds.
 
-        A CoAP sender using the FASOR algorithm SHOULD set initial RTO
+        A CoAP sender using the FASOR algorithm SHOULD set the initial RTO
         to 2 seconds. The computed FastRTO value as well as the initial RTO
-        value is subject to dithering; they are dithered between RTO + 1/4 x
-        SRTT and RTO + SRTT. For dithering initial RTO, SRTT is unset;
+        value is subject to dithering; both are dithered between RTO + 1/4 x
+        SRTT and RTO + SRTT. For dithering the initial RTO, SRTT is unset;
         therefore, SRTT is replaced with initial RTO / 3 which is derived
         from the RTO formula and equals to
-        a hypothetical initial RTT that would yield the initial RTO
-        using the SRTT and RTTVAR initialization rule of RFC 6298.
-        That is, for initial RTO of 2 seconds we use SRTT value of 2/3 seconds.  
+        a hypothetical initial RTT sample that would yield the initial RTO
+        of 2 seconds using the SRTT and RTTVAR initialization rule of RFC 6298.
+        That is, for the initial RTO of 2 seconds we use SRTT value of 2/3 seconds.  
         </t>
 
         <t>
@@ -245,25 +246,25 @@ on unambiguous round-trip time (RTT) samples.
         end-to-end path is subject to losses that are unrelated to
         congestion.
 
-        When the first unambiguous RTT sample is received, the RTT estimator
+        When the first unambiguous RTT sample (R) is received, the RTT estimator
         is initialized with that sample as specified in
-        <xref target="RFC6298"/> except RTTVAR that is set to R/2K.
+        <xref target="RFC6298"/> except RTTVAR that is set to R/2K .
         </t>
 
       </section>
       <section title="Slow RTO" anchor="sec_slowrto">
         <t>
         We introduce Slow RTO as a 
-        safe way to ensure that only a unique copy of message is sent
+        safe way to ensure that only a single copy of message is sent
         before at least one RTT has elapsed. To achieve this the sender must ensure that
         its RTO is set to a value that is larger than
-        the path end-to-end RTT that may be inflated by the unnecessary
-        retransmission themselves. 
+        the path end-to-end RTT that may be inflated by unnecessary
+        retransmissions themselves. 
 
         Therefore, whenever a message needs to be retransmitted, we
         measure Slow RTO as the elapsed time required for getting an acknowledgement.
         That is, Slow RTO is measured starting from the original transmission of the
-        request message until the receipt of the acknowledgement, regardless
+        message until the receipt of the acknowledgement, regardless
         of the number of retransmissions.
         In this way, Slow RTO always covers the worst-case RTT during which a
         number of unnecessary retransmissions were made but the
@@ -275,16 +276,16 @@ on unambiguous round-trip time (RTT) samples.
         retransmissions successfully from the network, it makes sense to wait for the time used for sending
         them rather than some smoothed value. 
         However, Slow RTO is multiplied by a factor to allow some growth in load
-        without making Slow RTO too aggressive (by default the factor of 1.5 is used).
+        without expiring Slow RTO too early (by default the factor of 1.5 is used).
         
         FASOR
         then applies Slow RTO as one of the backed off timer values used
-        with the next request message.
+        with the next message.
         </t>
         
         <t>
         Slow RTO allows rapidly converging
-        towards stable operating point because 1) it lets the duplicate copies
+        towards a stable operating point because 1) it lets the duplicate copies
         sent earlier to drain from the network reducing the perceived
         end-to-end RTT, and 2) allows enough time to acquire an unambiguous
         RTT sample for
@@ -309,19 +310,19 @@ on unambiguous round-trip time (RTT) samples.
         immediately
         after the last retransmission). Even if RTT would be increasing,
         the draining still occurs
-        rapidly due to exponentially backed off frequency in sending the
+        rapidly due to exponentially backed-off frequency in sending the
         unnecessary retransmissions.
         </t>
 
       </section>
 
-      <section title="Retransmission Timeout Back Off Logic">
+      <section title="Retransmission Timeout Backoff Logic">
       
         <section title="Overview">
        
       
         <t>
-        FASOR uses FastRTO as the base for binary exponential back off
+        FASOR uses FastRTO as the base for binary exponential backoff
         when no retransmission were needed for
         the previous CoAP message exchange.
         When retransmission were needed for the previous CoAP message exchange,
@@ -331,50 +332,50 @@ on unambiguous round-trip time (RTT) samples.
         of using Slow RTO. FASOR logic chooses
         from three possible back off series alternatives:
           <list>
-          <t>FAST back off: Perform traditional RTO back off with the FastRTO
+          <t>FAST backoff: Perform traditional RTO back off with the FastRTO
              as the base. Applied when the previous message was not retransmitted.</t>
-          <t>FAST_SLOW_FAST back off: First perform a probe using the FastRTO
-             for the original transmission of the request message
+          <t>FAST_SLOW_FAST backoff: First use the FastRTO
+             for the original transmission of the message
              to improve cases with losses unrelated to congestion.
-             If the probe for the original transmission of the request message
-             is successful without retransmissions, continue with FAST
-             back off for the next message exchange.
-             If the request message needs to be retransmitted, 
+             If the original transmission of the message
+             is successful without retransmissions, continue with the FAST
+             backoff for the next message exchange.
+             If the message needs to be retransmitted, 
              continue by using Slow RTO for the first retransmission in order to 
              respond to congestion and drain the
              network from the unnecessary retransmissions that were
-             potentially sent for the previous exchange. If still
+             potentially sent during the previous message exchange. If still
              further RTOs are needed, continue by backing off the
-             FastRTO further on each timeout. FAST_SLOW_FAST back off is applied just once
-             when the previous request message using FAST back off required one or more retransmissions.</t>
-          <t>SLOW_FAST back off: Perform Slow RTO first for the original 
-             transmisssion to respond to congestion and to acquire an
+             FastRTO further on each timeout. FAST_SLOW_FAST backoff is applied just once
+             when the previous message using FAST backoff required one or more retransmissions.</t>
+          <t>SLOW_FAST backoff: Perform Slow RTO first for the original 
+             transmission to respond to congestion and to acquire an
              unambiguous RTT sample with high probability. Then, 
-             if the original request needs to be retransmitted,
+             if the original message needs to be retransmitted,
              continue with the FastRTO-based RTO back off
              serie by backing off the FastRTO on each timeout. 
-             SLOW_FAST back off is applied
-             when the previous request message using FAST_SLOW_FAST or 
+             The SLOW_FAST backoff is applied
+             when the previous message using the FAST_SLOW_FAST or 
              SLOW_FAST 
-             back off required one or more retransmissions.
+             backoff required one or more retransmissions.
              Once an acknowledgement for the original transmission with
-             unambigous RTT sample is received, continue with FAST
-             back off for the next message exchange.
+             an unambigous RTT sample is received, continue with the FAST
+             backoff for the next message exchange.
             </t>
         </list>
-        For the initial message, FAST is used with INITIAL_RTO
+        For the initial message, FAST backoff is used with INITIAL_RTO
         as the FastRTO value. From there on, state is updated when an
         acknowledgement arrives.
         Following unambiguous RTT samples, FASOR always
-        uses FAST. Whenever retransmissions are needed, the back off
-        series selection is first downgraded to FAST_SLOW_FAST back off 
-        and then to SLOW_FAST back off if further retransmission are needed
-        in FAST_SLOW_FAST.
+        uses FAST backoff. Whenever retransmissions are needed, the backoff
+        series selection is first downgraded to FAST_SLOW_FAST backoff 
+        and then to SLOW_FAST backoff if further retransmissions are needed
+        in FAST_SLOW_FAST backoff.
         </t>
 
         <t>
-        When Slow RTO is used as the first RTO value, the sender
-        is likely to acquire unambiguous RTT sample even when the network
+        When Slow RTO in the SLOW_FAST backoff series is used as the first RTO value, the sender
+        is likely to acquire an unambiguous RTT sample even when the network
         has high delay due to congestion because Slow RTO is based on a
         very recent measurement of the worst-case RTT. However, using
         Slow RTO may
@@ -389,21 +390,22 @@ on unambiguous round-trip time (RTT) samples.
         through a wireless network where non-congestion related losses
         are much more frequent than in their wired counterparts. This has
         implications for the RTO algorithm. While it
-        would be possible to implement FASOR such that it immediately
-        uses Slow RTO when a dubious network state is detected, which
+        would be possible to implement FASOR such that it always immediately
+        uses Slow RTO when a dubious network state is detected with the previous message, which
         would handle congestion very well, it would
         do significant harm for performance when RTOs occur due to
         non-congestion related losses.
 <!--    (see "Slow" variant in ADDMEref).   -->
-        Instead, FASOR uses first the FastRTO for one transmission and only
-        responds using Slow RTO if RTO expires also for that
-        request message. Such a pattern
+        Instead, in the FAST_SLOW_FAST state, FASOR uses first the FastRTO for
+        the transmission of the original message and only
+        responds using Slow RTO if the FastRTO expires also for that
+        message. Such a pattern
         quickly probes if the losses were unrelated to congestion and
-        only slightly delays response if real congestion event is taking
+        only slightly delays acknowledgement if real congestion event is taking
         place. To ensure that an unambiguous RTT sample is also acquired
         on a congested network path,
         FASOR then needs to use Slow RTO for the original transmission of
-        the subsequent packet if the probe was not successful.
+        the subsequent message if the probe was not successful.
         </t>
         
         
@@ -413,8 +415,8 @@ on unambiguous round-trip time (RTT) samples.
       
       <t>
        FASOR consists of the three states discussed above while making
-       retranmission decisions, 
-   FAST, FAST_SLOW_FAST and SLOW_FAST. 
+       retranmission decisions on the backoff logic and RTO to use: 
+   FAST, FAST_SLOW_FAST, and SLOW_FAST. 
 
          The state machine of the FASOR algorithm is depicted in
          <xref target="fig_statemachine"/>.
@@ -442,30 +444,31 @@ on unambiguous round-trip time (RTT) samples.
       been acknowledged by the receiver
    within the time defined by FastRTO, the sender will retransmit it. If there is
    still no acknowledgement of the retransmitted packet within 2*FastRTO, the sender
-   performs the second retransmission and if necessary, each further
-   retransmission applying binary exponential back off of FastRTO. 
+   performs a second retransmission and, if necessary, each further
+   retransmission also applies the binary exponential backoff of the FastRTO. 
    The retransmission interval in this state is 
    defined as FastRTO, 2^1 * FastRTO, ..., 2^i * FastRTO. 
       </t>
       
       <t>
-        When there is an acknowledgement after any retransmission,
+        When an acknowledgement arrives after any retransmission in any of the states,
         the sender will calculate SlowRTO value based on the algorithm
         defined in <xref target="sec_slowrto"/>. 
       </t>
 
       <t>
-         When these is an acknowledgement after any retransmission,
-         the sender will also switch to
+         In the FAST state,
+         if an acknowledgement arrives after any retransmission,
+         the sender will switch to
    the second state, FAST_FLOW_FAST.  In this state, the retransmission interval is
    defined as FastRTO, Max(SlowRTO, 2*FastRTO), FastRTO * 2^1, ..., 2^i * FastRTO. 
    The state will be switched back to the FAST state once an acknowledgement
-   is returned within FastRTO, i.e., no retransmission happens for a message. This is
-   reasonable because it shows the network has recovered from congestion or bloated queue. 
+   is returned within FastRTO, i.e., no retransmissions for a message. This is
+   reasonable because it shows the network has recovered from congestion or a bloated queue. 
    </t>
    
    <t>
-   If some retransmission has been made before the acknowledged arrives
+   If at least one retransmission has been made before the acknowledged arrives
    in the FAST_SLOW_FAST
    state, the sender
    updates the SlowRTO value, and moves to the third state, SLOW_FAST.  The 
@@ -474,7 +477,7 @@ on unambiguous round-trip time (RTT) samples.
    </t>
    
    <t>
-   In SLOW_FAST state, the sender switches back to the FAST state
+   In the SLOW_FAST state, the sender switches back to the FAST state
    if an unambiguous
    acknowledgement arrives. Otherwise,
    the sender stays in the SLOW_FAST state if retransmission happens again.  
