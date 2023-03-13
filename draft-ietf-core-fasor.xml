@@ -218,7 +218,7 @@ on unambiguous round-trip time (RTT) samples.
         The FASOR algorithm measures the RTT for an CoAP message exchange over an end-to-end path
         and computes the RTO value using
         the TCP RTO algorithm specified in <xref target="RFC6298"/>.
-        We call this normal RTO or FastRTO.
+        We call this normal RTO as FastRTO.
         In contrast to the TCP RTO mechanism, FASOR SHOULD NOT use
         1 second lower-bound when setting the RTO because RTO is
         only a backup mechanisms for loss detection with TCP, whereas with CoAP
@@ -227,7 +227,7 @@ on unambiguous round-trip time (RTT) samples.
         low RTT environments. The RTO value MAY be upper-bounded by at least 60 seconds.
 
         A CoAP sender using the FASOR algorithm SHOULD set initial RTO
-        to 2 seconds. The computed RTO value as well as the initial RTO
+        to 2 seconds. The computed FastRTO value as well as the initial RTO
         value is subject to dithering; they are dithered between RTO + 1/4 x
         SRTT and RTO + SRTT. For dithering initial RTO, SRTT is unset;
         therefore, SRTT is replaced with initial RTO / 3 which is derived
@@ -269,7 +269,7 @@ on unambiguous round-trip time (RTT) samples.
         number of unnecessary retransmissions were made but the
         acknowledgement is received for the original transmission. 
 
-        In contrast to computing normal RTO, Slow RTO is not smoothed because it is
+        In contrast to computing the FastRTO, Slow RTO is not smoothed because it is
         derived from the sending pattern of the retransmissions (that may
         turn out unnecessary). In order to drain the potential unnecessary 
         retransmissions successfully from the network, it makes sense to wait for the time used for sending
@@ -288,7 +288,7 @@ on unambiguous round-trip time (RTT) samples.
         sent earlier to drain from the network reducing the perceived
         end-to-end RTT, and 2) allows enough time to acquire an unambiguous
         RTT sample for
-        the RTO computation. Robustly acquiring the RTT sample ensures that
+        the FastRTO computation. Robustly acquiring the RTT sample ensures that
         the next RTO is set according to the recent measurement and further
         unnecessary retransmissions are avoided.
 
@@ -321,7 +321,7 @@ on unambiguous round-trip time (RTT) samples.
        
       
         <t>
-        FASOR uses normal RTO as the base for binary exponential back off
+        FASOR uses FastRTO as the base for binary exponential back off
         when no retransmission were needed for
         the previous CoAP message exchange.
         When retransmission were needed for the previous CoAP message exchange,
@@ -331,9 +331,9 @@ on unambiguous round-trip time (RTT) samples.
         of using Slow RTO. FASOR logic chooses
         from three possible back off series alternatives:
           <list>
-          <t>FAST back off: Perform traditional RTO back off with the normal RTO
+          <t>FAST back off: Perform traditional RTO back off with the FastRTO
              as the base. Applied when the previous message was not retransmitted.</t>
-          <t>FAST_SLOW_FAST back off: First perform a probe using the normal RTO
+          <t>FAST_SLOW_FAST back off: First perform a probe using the FastRTO
              for the original transmission of the request message
              to improve cases with losses unrelated to congestion.
              If the probe for the original transmission of the request message
@@ -345,14 +345,14 @@ on unambiguous round-trip time (RTT) samples.
              network from the unnecessary retransmissions that were
              potentially sent for the previous exchange. If still
              further RTOs are needed, continue by backing off the
-             normal RTO further on each timeout. FAST_SLOW_FAST back off is applied just once
+             FastRTO further on each timeout. FAST_SLOW_FAST back off is applied just once
              when the previous request message using FAST back off required one or more retransmissions.</t>
           <t>SLOW_FAST back off: Perform Slow RTO first for the original 
              transmisssion to respond to congestion and to acquire an
              unambiguous RTT sample with high probability. Then, 
              if the original request needs to be retransmitted,
-             continue with the normal RTO-based RTO back off
-             serie by backing off the normal RTO on each timeout. 
+             continue with the FastRTO-based RTO back off
+             serie by backing off the FastRTO on each timeout. 
              SLOW_FAST back off is applied
              when the previous request message using FAST_SLOW_FAST or 
              SLOW_FAST 
@@ -395,7 +395,7 @@ on unambiguous round-trip time (RTT) samples.
         do significant harm for performance when RTOs occur due to
         non-congestion related losses.
 <!--    (see "Slow" variant in ADDMEref).   -->
-        Instead, FASOR uses first normal RTO for one transmission and only
+        Instead, FASOR uses first the FastRTO for one transmission and only
         responds using Slow RTO if RTO expires also for that
         request message. Such a pattern
         quickly probes if the losses were unrelated to congestion and
@@ -616,7 +616,7 @@ on unambiguous round-trip time (RTT) samples.
 -->
         <t>
         When the Retransmission Count option is in use, the client bases the 
-        RTO for the normal RTO in the back off
+        RTO for the FastRTO in the back off
         series as follows:
          <list>
           <t>
